@@ -45,13 +45,22 @@
 
 namespace ControlMath
 {
+
+enum class ControlState {
+	Normal,
+	PitchTilt,
+	RollTilt,
+	ThrustVector
+};
+
 /**
  * Converts thrust vector and yaw set-point to a desired attitude.
  * @param thr_sp desired 3D thrust vector
  * @param yaw_sp the desired yaw
  * @param att_sp attitude setpoint to fill
  */
-void thrustToAttitude(const matrix::Vector3f &thr_sp, const float yaw_sp, vehicle_attitude_setpoint_s &att_sp);
+void thrustToAttitude(const matrix::Vector3f &thr_sp, const float yaw_sp, const float roll_sp, const float pitch_sp,
+		      vehicle_attitude_setpoint_s &att_sp);
 
 /**
  * Limits the tilt angle between two unit vectors

@@ -129,4 +129,18 @@
         "yaml.schemas": {
                 "${workspaceFolder}/validation/module_schema.yaml": "${workspaceFolder}/src/modules/*/module.yaml"
         },
+        "python.autoComplete.extraPaths": [
+                "/home/hitman/ros2_ws/install/ros2_control_demo_testing/lib/python3.10/site-packages",
+                "/home/hitman/ros2_ws/install/px4_ros_com/local/lib/python3.10/dist-packages",
+                "/home/hitman/ros2_ws/install/px4_msgs/local/lib/python3.10/dist-packages",
+                "/opt/ros/humble/lib/python3.10/site-packages",
+                "/opt/ros/humble/local/lib/python3.10/dist-packages"
+        ],
+        "python.analysis.extraPaths": [
+                "/home/hitman/ros2_ws/install/ros2_control_demo_testing/lib/python3.10/site-packages",
+                "/home/hitman/ros2_ws/install/px4_ros_com/local/lib/python3.10/dist-packages",
+                "/home/hitman/ros2_ws/install/px4_msgs/local/lib/python3.10/dist-packages",
+                "/opt/ros/humble/lib/python3.10/site-packages",
+                "/opt/ros/humble/local/lib/python3.10/dist-packages"
+        ],
 }

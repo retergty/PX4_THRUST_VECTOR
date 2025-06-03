@@ -40,6 +40,7 @@
  */
 
 #include "ControlAllocation.hpp"
+#include <px4_platform_common/module.h>
 
 ControlAllocation::ControlAllocation()
 {
@@ -106,6 +107,24 @@ const
 	}
 
 	return actuator_normalized;
+}
+
+void ControlAllocation::print_status()
+{
+	PX4_INFO("current actuator setpoint:");
+	getActuatorSetpoint().print();
+
+	PX4_INFO("control setpoint");
+	auto control_setpoint = getControlSetpoint();
+	control_setpoint.print();
+
+	PX4_INFO("allocate control:");
+	auto allocated_control = getAllocatedControl();
+	allocated_control.print();
+
+	auto unallocated_control = control_setpoint - allocated_control;
+	PX4_INFO("unallocate control:");
+	unallocated_control.T().print();
 }
 
 void ControlAllocation::applySlewRateLimit(float dt)

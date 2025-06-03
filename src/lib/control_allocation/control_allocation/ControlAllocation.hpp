@@ -224,6 +224,11 @@ public:
 
 	virtual void updateParameters() {}
 
+	/**
+	 * print controll allocation status
+	 */
+	virtual void print_status();
+
 	int numConfiguredActuators() const { return _num_actuators; }
 
 	void setNormalizeRPY(bool normalize_rpy) { _normalize_rpy = normalize_rpy; }

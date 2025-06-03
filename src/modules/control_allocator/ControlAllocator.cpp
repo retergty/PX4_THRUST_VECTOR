@@ -278,6 +278,10 @@ ControlAllocator::update_effectiveness_source()
 			// spacecraft_allocation does allocation and publishes directly to actuator_motors topic
 			break;
 
+		case EffectivenessSource::Multirotor_Thrust_Vector:
+			tmp  = new ActuatorEffectivenessMCThrustVector(this);
+			break;
+
 		default:
 			PX4_ERR("Unknown airframe");
 			break;
@@ -479,7 +483,7 @@ ControlAllocator::update_effectiveness_matrix_if_needed(EffectivenessUpdateReaso
 	ActuatorEffectiveness::Configuration config{};
 
 	if (reason == EffectivenessUpdateReason::NO_EXTERNAL_UPDATE
-	    && hrt_elapsed_time(&_last_effectiveness_update) < 100_ms) { // rate-limit updates
+	    && hrt_elapsed_time(&_last_effectiveness_update) < 10_ms) { // rate-limit updates
 		return;
 	}
 
@@ -838,6 +842,8 @@ int ControlAllocator::print_status()
 		PX4_INFO("  maximum =");
 		_control_allocation[i]->getActuatorMax().T().print();
 		PX4_INFO("  Configured actuators: %i", _control_allocation[i]->numConfiguredActuators());
+		PX4_INFO(" Controll allocation status: ");
+		_control_allocation[i]->print_status();
 	}
 
 	if (_handled_motor_failure_bitmask) {

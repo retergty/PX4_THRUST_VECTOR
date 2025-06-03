@@ -39,6 +39,7 @@ __BEGIN_DECLS
 #include <stm32_tim.h>
 #include <stm32_spi.h>
 #include <stm32_i2c.h>
+#include <stm32_qspi.h>
 
 /* STM32/32F7 defines the 96 bit UUID as
  *  init32_t[3] that can be read as bytes/half-words/words
@@ -92,6 +93,7 @@ __BEGIN_DECLS
 
 #define PX4_BUS_OFFSET       0                  /* STM buses are 1 based no adjustment needed */
 #define px4_spibus_initialize(bus_num_1based)   stm32_spibus_initialize(bus_num_1based)
+#define px4_qspibus_initialize(bus_num_1based)   stm32h7_qspi_initialize(bus_num_1based)
 
 #define px4_i2cbus_initialize(bus_num_1based)   stm32_i2cbus_initialize(bus_num_1based)
 #define px4_i2cbus_uninitialize(pdev)           stm32_i2cbus_uninitialize(pdev)

@@ -64,6 +64,8 @@ bool MulticopterPositionControl::init()
 		return false;
 	}
 
+	_pitch_setpoint_filter.setCutoffFreq(125, 1);
+	_roll_setpoint_filter.setCutoffFreq(125, 1);
 	_time_stamp_last_loop = hrt_absolute_time();
 	ScheduleNow();
 
@@ -433,6 +435,8 @@ void MulticopterPositionControl::Run()
 		}
 
 		_trajectory_setpoint_sub.update(&_setpoint);
+		_roll_pitch_setpoint_sub.update(&_roll_pitch_sp);
+		_vehicle_attitude_sub.update(&_vehicle_att);
 
 		adjustSetpointForEKFResets(vehicle_local_position, _setpoint);
 
@@ -541,7 +545,26 @@ void MulticopterPositionControl::Run()
 				math::min(speed_up, _param_mpc_z_vel_max_up.get()), // takeoff ramp starts with negative velocity limit
 				math::max(speed_down, 0.f));
 
+			if (!std::isnan(_roll_pitch_sp.pitch)) {
+				_pitch_setpoint_filter.update(_roll_pitch_sp.pitch);
+				_control.setPitchSetpoint(_pitch_setpoint_filter.getState());
+
+			} else {
+				_pitch_setpoint_filter.reset(Eulerf(Quaternionf(_vehicle_att.q)).theta());
+				_control.setPitchSetpoint(NAN);
+			}
+
+			if (!std::isnan(_roll_pitch_sp.roll)) {
+				_roll_setpoint_filter.update(_roll_pitch_sp.roll);
+				_control.setRollSetpoint(_roll_setpoint_filter.getState());
+
+			} else {
+				_roll_setpoint_filter.reset(Eulerf(Quaternionf(_vehicle_att.q)).phi());
+				_control.setRollSetpoint(NAN);
+			}
+
 			_control.setInputSetpoint(_setpoint);
+			_control.setAttitude(_vehicle_att.q);
 
 			// update states
 			if (!PX4_ISFINITE(_setpoint.position[2])

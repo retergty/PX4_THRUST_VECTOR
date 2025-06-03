@@ -39,15 +39,78 @@
 #include <px4_platform_common/defines.h>
 #include <float.h>
 #include <mathlib/mathlib.h>
-
 using namespace matrix;
 
 namespace ControlMath
 {
-void thrustToAttitude(const Vector3f &thr_sp, const float yaw_sp, vehicle_attitude_setpoint_s &att_sp)
+void thrustToAttitude(const Vector3f &thr_sp, const float yaw_sp, const float roll_sp, const float pitch_sp,
+		      vehicle_attitude_setpoint_s &att_sp)
 {
-	bodyzToAttitude(-thr_sp, yaw_sp, att_sp);
-	att_sp.thrust_body[2] = -thr_sp.length();
+	ControlState control_state = ControlState::Normal;
+
+	if (std::isnan(roll_sp)) {
+		if (std::isnan(pitch_sp)) {
+			control_state = ControlState::Normal;
+
+		} else {
+			control_state = ControlState::PitchTilt;
+		}
+
+	} else {
+		if (std::isnan(pitch_sp)) {
+			control_state = ControlState::RollTilt;
+
+		} else {
+			control_state = ControlState::ThrustVector;
+		}
+	}
+
+	if (control_state == ControlState::Normal) {
+		bodyzToAttitude(-thr_sp, yaw_sp, att_sp);
+		Quaternionf q_sp{att_sp.q_d};
+		Vector3f thrust_body = q_sp.rotateVectorInverse(thr_sp);
+		thrust_body.copyTo(att_sp.thrust_body);
+	}
+
+	if (control_state == ControlState::RollTilt) {
+		control_state = ControlState::ThrustVector;
+	}
+
+	if (control_state == ControlState::PitchTilt) {
+		Quaternionf q_y{AxisAnglef(Vector3f(0, 1, 0), pitch_sp)};
+		Quaternionf q_z{AxisAnglef(Vector3f(0, 0, 1), yaw_sp)};
+		Quaternionf q_z_y = q_z * q_y;
+
+		Vector3f thr_sp_z_y = q_z_y.rotateVectorInverse(thr_sp);
+
+		float roll_sp_real;
+
+		if (abs(thr_sp_z_y(2)) < 1e-4f) {
+			if (thr_sp_z_y(1) < 0) {
+				roll_sp_real = M_PI;
+
+			} else {
+				roll_sp_real = -M_PI;
+			}
+
+		} else {
+			roll_sp_real = atan(-thr_sp_z_y(1) / thr_sp_z_y(2));
+		}
+
+		Quaternionf q_x{AxisAnglef(Vector3f(1, 0, 0), roll_sp_real)};
+		Quaternionf q_sp = q_z * q_y * q_x;
+		Vector3f thrust_body = q_sp.rotateVectorInverse(thr_sp);
+
+		q_sp.copyTo(att_sp.q_d);
+		thrust_body.copyTo(att_sp.thrust_body);
+	}
+
+	if (control_state == ControlState::ThrustVector) {
+		Quaternionf q_sp{Eulerf(roll_sp, pitch_sp, yaw_sp)};
+		Vector3f thrust_body = q_sp.rotateVectorInverse(thr_sp);
+		q_sp.copyTo(att_sp.q_d);
+		thrust_body.copyTo(att_sp.thrust_body);
+	}
 }
 
 void limitTilt(Vector3f &body_unit, const Vector3f &world_unit, const float max_angle)

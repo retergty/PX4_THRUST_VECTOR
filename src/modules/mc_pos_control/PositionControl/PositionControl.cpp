@@ -96,6 +96,14 @@ void PositionControl::setState(const PositionControlStates &states)
 	_vel_dot = states.acceleration;
 }
 
+void PositionControl::setAttitude(const float q[4])
+{
+	_q[0] = q[0];
+	_q[1] = q[1];
+	_q[2] = q[2];
+	_q[3] = q[3];
+}
+
 void PositionControl::setInputSetpoint(const trajectory_setpoint_s &setpoint)
 {
 	_pos_sp = Vector3f(setpoint.position);
@@ -103,6 +111,16 @@ void PositionControl::setInputSetpoint(const trajectory_setpoint_s &setpoint)
 	_acc_sp = Vector3f(setpoint.acceleration);
 	_yaw_sp = setpoint.yaw;
 	_yawspeed_sp = setpoint.yawspeed;
+}
+
+void PositionControl::setPitchSetpoint(const float pitch_sp)
+{
+	_pitch_sp = pitch_sp;
+}
+
+void PositionControl::setRollSetpoint(const float roll_sp)
+{
+	_roll_sp = roll_sp;
 }
 
 bool PositionControl::update(const float dt)
@@ -265,6 +283,16 @@ void PositionControl::getLocalPositionSetpoint(vehicle_local_position_setpoint_s
 
 void PositionControl::getAttitudeSetpoint(vehicle_attitude_setpoint_s &attitude_setpoint) const
 {
-	ControlMath::thrustToAttitude(_thr_sp, _yaw_sp, attitude_setpoint);
+	ControlMath::thrustToAttitude(_thr_sp, _yaw_sp, _roll_sp, _pitch_sp, attitude_setpoint);
+
+	Quaternionf(_q).rotateVectorInverse(_thr_sp).copyTo(attitude_setpoint.thrust_body);
+
+	if (std::isnan(_pitch_sp)) {
+		attitude_setpoint.thrust_body[0] = 0.f;
+
+	}
+	if(std::isnan(_roll_sp)){
+		attitude_setpoint.thrust_body[1] = 0.f;
+	}
 	attitude_setpoint.yaw_sp_move_rate = _yawspeed_sp;
 }

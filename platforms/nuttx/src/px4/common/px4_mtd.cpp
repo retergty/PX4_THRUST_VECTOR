@@ -57,6 +57,7 @@
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/mtd/mtd.h>
+#include <nuttx/spi/qspi.h>
 
 extern "C" {
 	struct mtd_dev_s *ramtron_initialize(FAR struct spi_dev_s *dev);
@@ -131,6 +132,64 @@ static int ramtron_attach(mtd_instance_s &instance)
 #endif
 }
 
+// static int w25qxxjv_attach(mtd_instance_s &instance)
+// {
+// #if defined(CONFIG_MTD_W25QXXXJV)
+// 	/* start the RAMTRON driver at 100MHz */
+
+// 	unsigned long spi_speed_hz = 100'000'000;
+
+// 	for (int i = 0; spi_speed_hz > 0; i++) {
+// 		/* initialize the right spi */
+// 		struct qspi_dev_s *qspi = px4_qspibus_initialize(0);
+
+// 		if (qspi == nullptr) {
+// 			PX4_ERR("failed to locate spi bus");
+// 			return -ENXIO;
+// 		}
+
+// 		/* this resets the spi bus, set correct bus speed again */
+// 		QSPI_LOCK(qspi, true);
+// 		QSPI_SETFREQUENCY(qspi, spi_speed_hz);
+// 		QSPI_SETBITS(qspi, 8);
+// 		QSPI_SETMODE(qspi, QSPIDEV_MODE0);
+// 		QSPI_LOCK(qspi, false);
+
+// 		instance.mtd_dev = w25qxxxjv_initialize(qspi, true);
+
+// 		if (instance.mtd_dev) {
+// 			/* abort on first valid result */
+// 			if (i > 0) {
+// 				PX4_WARN("mtd needed %d attempts to attach", i + 1);
+// 			}
+
+// 			break;
+// 		}
+
+// 		// try reducing speed for next attempt
+// 		spi_speed_hz -= 1'000'000;
+// 		px4_usleep(10000);
+// 	}
+
+// 	/* if last attempt is still unsuccessful, abort */
+// 	if (instance.mtd_dev == nullptr) {
+// 		PX4_ERR("failed to initialize mtd driver");
+// 		return -EIO;
+// 	}
+
+// 	int ret = instance.mtd_dev->ioctl(instance.mtd_dev, MTDIOC_SETSPEED, spi_speed_hz);
+
+// 	if (ret != OK) {
+// 		// FIXME: From the previous warning call, it looked like this should have been fatal error instead. Tried
+// 		// that but setting the bus speed does fail all the time. Which was then exiting and the board would
+// 		// not run correctly. So changed to PX4_WARN.
+// 		PX4_WARN("failed to set bus speed");
+// 	}
+
+// #endif
+// 	return 0;
+
+// }
 
 static int at24xxx_attach(mtd_instance_s &instance)
 {
@@ -357,9 +416,6 @@ memoryout:
 			rv = flexspi_attach(instances[i]);
 #endif
 
-		} else if (mtd_list->entries[num_entry]->device->bus_type == px4_mft_device_t::ONCHIP) {
-			instances[i]->n_partitions_current++;
-			return 0;
 		}
 
 		if (rv != 0) {

@@ -67,6 +67,8 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
+#include <uORB/topics/roll_pitch_setpoint.h>
+#include <uORB/topics/vehicle_attitude.h>
 
 using namespace time_literals;
 
@@ -108,11 +110,15 @@ private:
 	uORB::Subscription _vehicle_constraints_sub{ORB_ID(vehicle_constraints)};
 	uORB::Subscription _vehicle_control_mode_sub{ORB_ID(vehicle_control_mode)};
 	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};
+	uORB::Subscription _roll_pitch_setpoint_sub{ORB_ID(roll_pitch_setpoint)};
+	uORB::Subscription _vehicle_attitude_sub{ORB_ID(vehicle_attitude)};
 
 	hrt_abstime _time_stamp_last_loop{0};		/**< time stamp of last loop iteration */
 	hrt_abstime _time_position_control_enabled{0};
 
 	trajectory_setpoint_s _setpoint{PositionControl::empty_trajectory_setpoint};
+	roll_pitch_setpoint_s _roll_pitch_sp{.timestamp = 0, .pitch = NAN,.roll = NAN};
+	vehicle_attitude_s _vehicle_att{.timestamp = 0, .q{1, 0, 0, 0}};
 	vehicle_control_mode_s _vehicle_control_mode{};
 
 	vehicle_constraints_s _vehicle_constraints {
@@ -192,6 +198,9 @@ private:
 	);
 
 	math::WelfordMean<float> _sample_interval_s{};
+
+	AlphaFilter<float> _pitch_setpoint_filter{};
+	AlphaFilter<float> _roll_setpoint_filter{};
 
 	AlphaFilter<matrix::Vector2f> _vel_xy_lp_filter{};
 	AlphaFilter<float> _vel_z_lp_filter{};

@@ -140,11 +140,32 @@ public:
 	void setState(const PositionControlStates &states);
 
 	/**
+	 * Pass the current vehicle attitude to the controller
+	 * Note: NAN value means leave pitch uncontrolled
+	 * @param pitch_sp pitch setpoint
+	 */
+	void setAttitude(const float q[4]);
+
+	/**
 	 * Pass the desired setpoints
 	 * Note: NAN value means no feed forward/leave state uncontrolled if there's no higher order setpoint.
 	 * @param setpoint setpoints including feed-forwards to execute in update()
 	 */
 	void setInputSetpoint(const trajectory_setpoint_s &setpoint);
+
+	/**
+	 * Pass the desired pitch setpoint
+	 * Note: NAN value means leave pitch uncontrolled
+	 * @param pitch_sp pitch setpoint
+	 */
+	void setPitchSetpoint(const float pitch_sp);
+
+	/**
+	* Pass the desired roll setpoint
+	* Note: NAN value means leave pitch uncontrolled
+	* @param roll_sp pitch setpoint
+	*/
+	void setRollSetpoint(const float roll_sp);
 
 	/**
 	 * Apply P-position and PID-velocity controller that updates the member
@@ -225,6 +246,7 @@ private:
 	matrix::Vector3f _vel_dot; /**< velocity derivative (replacement for acceleration estimate) */
 	matrix::Vector3f _vel_int; /**< integral term of the velocity controller */
 	float _yaw{}; /**< current heading */
+	float _q[4] {1, 0, 0, 0}; /*current attitude*/
 
 	// Setpoints
 	matrix::Vector3f _pos_sp; /**< desired position */
@@ -233,4 +255,6 @@ private:
 	matrix::Vector3f _thr_sp; /**< desired thrust */
 	float _yaw_sp{}; /**< desired heading */
 	float _yawspeed_sp{}; /** desired yaw-speed */
+	float _roll_sp{NAN}; /**< desired roll */
+	float _pitch_sp{NAN}; /**< desired pitch */
 };

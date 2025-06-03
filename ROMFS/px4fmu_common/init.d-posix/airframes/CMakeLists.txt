@@ -93,6 +93,8 @@ px4_add_romfs_files(
 	4018_gz_quadtailsitter
 	4019_gz_x500_gimbal
 	4020_gz_tiltrotor
+	4099_gz_mctilt
+	4100_gz_thrust_vector
 
 	6011_gazebo-classic_typhoon_h480
 	6011_gazebo-classic_typhoon_h480.post

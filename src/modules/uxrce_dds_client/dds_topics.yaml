@@ -77,6 +77,9 @@ publications:
   - topic: /fmu/out/airspeed_validated
     type: px4_msgs::msg::AirspeedValidated
 
+  - topic: /fmu/out/servo_angle
+    type: px4_msgs::msg::ServoAngle
+
 # Create uORB::Publication
 subscriptions:
   - topic: /fmu/in/register_ext_component_request
@@ -165,6 +168,9 @@ subscriptions:
 
   - topic: /fmu/in/aux_global_position
     type: px4_msgs::msg::VehicleGlobalPosition
+
+  - topic: /fmu/in/roll_pitch_setpoint
+    type: px4_msgs::msg::RollPitchSetpoint
 
 # Create uORB::PublicationMulti
 subscriptions_multi:

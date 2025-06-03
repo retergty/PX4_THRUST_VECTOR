@@ -1,0 +1,6 @@
+#!/bin/sh
+#
+# PX4 FMUv6X specific board MAVLink startup script.
+#------------------------------------------------------------------------------
+
+# if skynode base board is detected start Mavlink on Telem2

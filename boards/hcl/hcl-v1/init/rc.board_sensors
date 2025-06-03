@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# PX4 FMUv6X specific board sensors init
+#------------------------------------------------------------------------------
+if mft query -q -k MFT -s MFT_PM2 -v 0
+then
+	set HAVE_PM2 no
+fi
+
+board_adc start
+
+icm42688p -R 0 -s -b 1 start
+icm42688p -R 0 -s -1 4 start
+
+ist8310 -I -b 3 -R 2 -a 0x0e start
+
+ms5611 -I -b 4 -a 0xec start
+

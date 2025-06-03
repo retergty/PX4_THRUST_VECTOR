@@ -268,6 +268,8 @@ set(msg_files
 	versioned/VehicleRatesSetpoint.msg
 	versioned/VehicleStatus.msg
 	versioned/VtolVehicleStatus.msg
+	ServoAngle.msg
+	RollPitchSetpoint.msg
 )
 list(SORT msg_files)
 

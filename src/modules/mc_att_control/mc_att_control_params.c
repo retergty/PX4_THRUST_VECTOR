@@ -94,7 +94,7 @@ PARAM_DEFINE_FLOAT(MC_YAW_P, 2.8f);
  * @increment 0.1
  * @group Multicopter Attitude Control
  */
-PARAM_DEFINE_FLOAT(MC_YAW_WEIGHT, 0.4f);
+PARAM_DEFINE_FLOAT(MC_YAW_WEIGHT, 0.5f);
 
 /**
  * Max roll rate
