@@ -168,7 +168,7 @@
 
 /* PWM
  */
-#define DIRECT_PWM_OUTPUT_CHANNELS   4
+#define DIRECT_PWM_OUTPUT_CHANNELS   8
 
 
 /* Power supply control and monitoring GPIOs */
