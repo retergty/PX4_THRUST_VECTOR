@@ -149,59 +149,9 @@ ControlAllocator::update_allocation_method(bool force)
 	}
 
 	if (_allocation_method_id != configured_method || force) {
-
-		matrix::Vector<float, NUM_ACTUATORS> actuator_sp[ActuatorEffectiveness::MAX_NUM_MATRICES];
-
-		// Cleanup first
-		for (int i = 0; i < ActuatorEffectiveness::MAX_NUM_MATRICES; ++i) {
-			// Save current state
-			if (_control_allocation[i] != nullptr) {
-				actuator_sp[i] = _control_allocation[i]->getActuatorSetpoint();
-			}
-
-			delete _control_allocation[i];
-			_control_allocation[i] = nullptr;
-		}
-
 		_num_control_allocation = _actuator_effectiveness->numMatrices();
-
-		AllocationMethod desired_methods[ActuatorEffectiveness::MAX_NUM_MATRICES];
-		_actuator_effectiveness->getDesiredAllocationMethod(desired_methods);
-
-		bool normalize_rpy[ActuatorEffectiveness::MAX_NUM_MATRICES];
-		_actuator_effectiveness->getNormalizeRPY(normalize_rpy);
-
-		for (int i = 0; i < _num_control_allocation; ++i) {
-			AllocationMethod method = configured_method;
-
-			if (configured_method == AllocationMethod::AUTO) {
-				method = desired_methods[i];
-			}
-
-			switch (method) {
-			case AllocationMethod::PSEUDO_INVERSE:
-				_control_allocation[i] = new ControlAllocationPseudoInverse();
-				break;
-
-			case AllocationMethod::SEQUENTIAL_DESATURATION:
-				_control_allocation[i] = new ControlAllocationSequentialDesaturation();
-				break;
-
-			default:
-				PX4_ERR("Unknown allocation method");
-				break;
-			}
-
-			if (_control_allocation[i] == nullptr) {
-				PX4_ERR("alloc failed");
-				_num_control_allocation = 0;
-
-			} else {
-				_control_allocation[i]->setNormalizeRPY(normalize_rpy[i]);
-				_control_allocation[i]->setActuatorSetpoint(actuator_sp[i]);
-			}
-		}
-
+		delete _control_allocation[0];
+		_control_allocation[0] = new ControlAllocationThrustVector();
 		_allocation_method_id = configured_method;
 	}
 }
@@ -212,97 +162,9 @@ ControlAllocator::update_effectiveness_source()
 	const EffectivenessSource source = (EffectivenessSource)_param_ca_airframe.get();
 
 	if (_effectiveness_source_id != source) {
-
-		// try to instanciate new effectiveness source
-		ActuatorEffectiveness *tmp = nullptr;
-
-		switch (source) {
-		case EffectivenessSource::NONE:
-		case EffectivenessSource::MULTIROTOR:
-			tmp = new ActuatorEffectivenessMultirotor(this);
-			break;
-
-		case EffectivenessSource::STANDARD_VTOL:
-			tmp = new ActuatorEffectivenessStandardVTOL(this);
-			break;
-
-		case EffectivenessSource::TILTROTOR_VTOL:
-			tmp = new ActuatorEffectivenessTiltrotorVTOL(this);
-			break;
-
-		case EffectivenessSource::TAILSITTER_VTOL:
-			tmp = new ActuatorEffectivenessTailsitterVTOL(this);
-			break;
-
-		case EffectivenessSource::ROVER_ACKERMANN:
-			tmp = new ActuatorEffectivenessRoverAckermann();
-			break;
-
-		case EffectivenessSource::ROVER_DIFFERENTIAL:
-			// rover_differential_control does allocation and publishes directly to actuator_motors topic
-			break;
-
-		case EffectivenessSource::FIXED_WING:
-			tmp = new ActuatorEffectivenessFixedWing(this);
-			break;
-
-		case EffectivenessSource::MOTORS_6DOF: // just a different UI from MULTIROTOR
-			tmp = new ActuatorEffectivenessUUV(this);
-			break;
-
-		case EffectivenessSource::MULTIROTOR_WITH_TILT:
-			tmp = new ActuatorEffectivenessMCTilt(this);
-			break;
-
-		case EffectivenessSource::CUSTOM:
-			tmp = new ActuatorEffectivenessCustom(this);
-			break;
-
-		case EffectivenessSource::HELICOPTER_TAIL_ESC:
-			tmp = new ActuatorEffectivenessHelicopter(this, ActuatorType::MOTORS);
-			break;
-
-		case EffectivenessSource::HELICOPTER_TAIL_SERVO:
-			tmp = new ActuatorEffectivenessHelicopter(this, ActuatorType::SERVOS);
-			break;
-
-		case EffectivenessSource::HELICOPTER_COAXIAL:
-			tmp = new ActuatorEffectivenessHelicopterCoaxial(this);
-			break;
-
-		case EffectivenessSource::SPACECRAFT_2D:
-			// spacecraft_allocation does allocation and publishes directly to actuator_motors topic
-			break;
-
-		case EffectivenessSource::SPACECRAFT_3D:
-			// spacecraft_allocation does allocation and publishes directly to actuator_motors topic
-			break;
-
-		case EffectivenessSource::Multirotor_Thrust_Vector:
-			tmp  = new ActuatorEffectivenessMCThrustVector(this);
-			break;
-
-		default:
-			PX4_ERR("Unknown airframe");
-			break;
-		}
-
-		// Replace previous source with new one
-		if (tmp == nullptr) {
-			// It did not work, forget about it
-			PX4_ERR("Actuator effectiveness init failed");
-			_param_ca_airframe.set((int)_effectiveness_source_id);
-
-		} else {
-			// Swap effectiveness sources
-			delete _actuator_effectiveness;
-			_actuator_effectiveness = tmp;
-
-			// Save source id
-			_effectiveness_source_id = source;
-		}
-
-		return true;
+		// instanciate thrust vector
+		delete _actuator_effectiveness;
+		_actuator_effectiveness = new ActuatorEffectivenessMCThrustVector(this);
 	}
 
 	return false;
@@ -349,29 +211,6 @@ ControlAllocator::Run()
 		if (_vehicle_status_sub.update(&vehicle_status)) {
 
 			_armed = vehicle_status.arming_state == vehicle_status_s::ARMING_STATE_ARMED;
-
-			ActuatorEffectiveness::FlightPhase flight_phase{ActuatorEffectiveness::FlightPhase::HOVER_FLIGHT};
-
-			// Check if the current flight phase is HOVER or FIXED_WING
-			if (vehicle_status.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING) {
-				flight_phase = ActuatorEffectiveness::FlightPhase::HOVER_FLIGHT;
-
-			} else {
-				flight_phase = ActuatorEffectiveness::FlightPhase::FORWARD_FLIGHT;
-			}
-
-			// Special cases for VTOL in transition
-			if (vehicle_status.is_vtol && vehicle_status.in_transition_mode) {
-				if (vehicle_status.in_transition_to_fw) {
-					flight_phase = ActuatorEffectiveness::FlightPhase::TRANSITION_HF_TO_FF;
-
-				} else {
-					flight_phase = ActuatorEffectiveness::FlightPhase::TRANSITION_FF_TO_HF;
-				}
-			}
-
-			// Forward to effectiveness source
-			_actuator_effectiveness->setFlightPhase(flight_phase);
 		}
 	}
 
@@ -414,7 +253,8 @@ ControlAllocator::Run()
 	if (do_update) {
 		_last_run = now;
 
-		check_for_motor_failures();
+		//not check, because it is a beta version
+		//check_for_motor_failures();
 
 		update_effectiveness_matrix_if_needed(EffectivenessUpdateReason::NO_EXTERNAL_UPDATE);
 
@@ -426,20 +266,6 @@ ControlAllocator::Run()
 		c[0](3) = _thrust_sp(0);
 		c[0](4) = _thrust_sp(1);
 		c[0](5) = _thrust_sp(2);
-
-		if (_num_control_allocation > 1) {
-			if (_vehicle_torque_setpoint1_sub.copy(&vehicle_torque_setpoint)) {
-				c[1](0) = vehicle_torque_setpoint.xyz[0];
-				c[1](1) = vehicle_torque_setpoint.xyz[1];
-				c[1](2) = vehicle_torque_setpoint.xyz[2];
-			}
-
-			if (_vehicle_thrust_setpoint1_sub.copy(&vehicle_thrust_setpoint)) {
-				c[1](3) = vehicle_thrust_setpoint.xyz[0];
-				c[1](4) = vehicle_thrust_setpoint.xyz[1];
-				c[1](5) = vehicle_thrust_setpoint.xyz[2];
-			}
-		}
 
 		for (int i = 0; i < _num_control_allocation; ++i) {
 
@@ -578,26 +404,6 @@ ControlAllocator::update_effectiveness_matrix_if_needed(EffectivenessUpdateReaso
 			_control_allocation[i]->setActuatorMin(minimum[i]);
 			_control_allocation[i]->setActuatorMax(maximum[i]);
 			_control_allocation[i]->setSlewRateLimit(slew_rate[i]);
-
-			// Set all the elements of a row to 0 if that row has weak authority.
-			// That ensures that the algorithm doesn't try to control axes with only marginal control authority,
-			// which in turn would degrade the control of the main axes that actually should and can be controlled.
-
-			ActuatorEffectiveness::EffectivenessMatrix &matrix = config.effectiveness_matrices[i];
-
-			for (int n = 0; n < NUM_AXES; n++) {
-				bool all_entries_small = true;
-
-				for (int m = 0; m < config.num_actuators_matrix[i]; m++) {
-					if (fabsf(matrix(n, m)) > 0.05f) {
-						all_entries_small = false;
-					}
-				}
-
-				if (all_entries_small) {
-					matrix.row(n) = 0.f;
-				}
-			}
 
 			// Assign control effectiveness matrix
 			int total_num_actuators = config.num_actuators_matrix[i];
@@ -809,16 +615,12 @@ int ControlAllocator::print_status()
 		PX4_INFO("Method: None");
 		break;
 
-	case AllocationMethod::PSEUDO_INVERSE:
-		PX4_INFO("Method: Pseudo-inverse");
+	case AllocationMethod::THRUST_VECTOR:
+		PX4_INFO("Method: Thrust vector quadratic programming");
 		break;
 
-	case AllocationMethod::SEQUENTIAL_DESATURATION:
-		PX4_INFO("Method: Sequential desaturation");
-		break;
-
-	case AllocationMethod::AUTO:
-		PX4_INFO("Method: Auto");
+	default:
+		PX4_INFO("Not Thrust Vector Support Allocation Method");
 		break;
 	}
 
@@ -836,7 +638,7 @@ int ControlAllocator::print_status()
 		}
 
 		PX4_INFO("  Effectiveness.T =");
-		effectiveness.T().print();
+		effectiveness.print();
 		PX4_INFO("  minimum =");
 		_control_allocation[i]->getActuatorMin().T().print();
 		PX4_INFO("  maximum =");

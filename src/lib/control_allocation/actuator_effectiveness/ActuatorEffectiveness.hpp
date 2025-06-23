@@ -50,7 +50,8 @@ enum class AllocationMethod {
 	NONE = -1,
 	PSEUDO_INVERSE = 0,
 	SEQUENTIAL_DESATURATION = 1,
-	AUTO = 2,
+	THRUST_VECTOR = 2,
+	AUTO = 3,
 };
 
 enum class ActuatorType {
@@ -73,7 +74,7 @@ public:
 	ActuatorEffectiveness() = default;
 	virtual ~ActuatorEffectiveness() = default;
 
-	static constexpr int NUM_ACTUATORS = 16;
+	static constexpr int NUM_ACTUATORS = 12;
 	static constexpr int NUM_AXES = 6;
 
 	enum ControlAxis {

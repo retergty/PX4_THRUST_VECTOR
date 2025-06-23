@@ -95,34 +95,16 @@ public:
 		normalize[0] = true;
 	}
 
-	static int computeEffectivenessMatrix(const Geometry &geometry,
-					      EffectivenessMatrix &effectiveness, int actuator_start_index = 0);
+	int computeEffectivenessMatrix(const Geometry &geometry,
+				       EffectivenessMatrix &effectiveness, int actuator_start_index = 0);
 
 	bool addActuators(Configuration &configuration);
 
-	const char *name() const override { return "2D Rotors"; }
+	const char *name() const override { return "3D Rotors"; }
 
 	const Geometry &geometry() const { return _geometry; }
 
-	void setServoAngle(float servo_angle[8])
-	{
-		for (size_t i = 0; i < 4; ++i) {
-			_servo_angle[i](0) = servo_angle[i * 2];
-			_servo_angle[i](1) = servo_angle[i * 2 + 1];
-		}
-	}
-	bool computeServoAngle(const matrix::Vector3f &thrust_body);
-	matrix::Vector<float, 8> getServoAngle()
-	{
-		matrix::Vector<float, 8> servo_angle;
-
-		for (size_t i = 0; i < 4; ++i) {
-			servo_angle(i * 2) = _servo_angle[i](0);
-			servo_angle(i * 2 + 1) = _servo_angle[i](1);
-		}
-
-		return servo_angle;
-	}
+	matrix::Vector<float, 12> computeActuatorSetpoint(const matrix::Vector<float, 12> &force_vector);
 private:
 	constexpr static float SERVO_ANGLE_MAX = M_PI_F / 2.f;
 	constexpr static float SERVO_ANGLE_MIN = -M_PI_F / 2.f;
@@ -133,8 +115,7 @@ private:
 	matrix::Quaternionf _motor_q[4];
 
 	matrix::Vector<float, 2> _servo_angle[4];
-	matrix::Matrix<float, 12, 3> _eff_mat_inv;
-
+	float _rotor_speed[4];
 	struct ParamHandles {
 		param_t position_x;
 		param_t position_y;

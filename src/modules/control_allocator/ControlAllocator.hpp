@@ -43,14 +43,7 @@
 
 #include <ActuatorEffectiveness.hpp>
 #include <ActuatorEffectivenessMultirotor.hpp>
-#include <ActuatorEffectivenessStandardVTOL.hpp>
-#include <ActuatorEffectivenessTiltrotorVTOL.hpp>
-#include <ActuatorEffectivenessTailsitterVTOL.hpp>
-#include <ActuatorEffectivenessRoverAckermann.hpp>
-#include <ActuatorEffectivenessFixedWing.hpp>
 #include <ActuatorEffectivenessMCTilt.hpp>
-#include <ActuatorEffectivenessCustom.hpp>
-#include <ActuatorEffectivenessUUV.hpp>
 #include <ActuatorEffectivenessHelicopter.hpp>
 #include <ActuatorEffectivenessHelicopterCoaxial.hpp>
 #include <ActuatorEffectivenessMCThrustVector.hpp>
@@ -58,6 +51,7 @@
 #include <ControlAllocation.hpp>
 #include <ControlAllocationPseudoInverse.hpp>
 #include <ControlAllocationSequentialDesaturation.hpp>
+#include <ControlAllocationThrustVector.hpp>
 
 #include <lib/matrix/matrix/math.hpp>
 #include <lib/perf/perf_counter.h>
@@ -147,21 +141,7 @@ private:
 	enum class EffectivenessSource {
 		NONE = -1,
 		MULTIROTOR = 0,
-		FIXED_WING = 1,
-		STANDARD_VTOL = 2,
-		TILTROTOR_VTOL = 3,
-		TAILSITTER_VTOL = 4,
-		ROVER_ACKERMANN = 5,
-		ROVER_DIFFERENTIAL = 6,
-		MOTORS_6DOF = 7,
-		MULTIROTOR_WITH_TILT = 8,
-		CUSTOM = 9,
-		HELICOPTER_TAIL_ESC = 10,
-		HELICOPTER_TAIL_SERVO = 11,
-		HELICOPTER_COAXIAL = 12,
-		SPACECRAFT_2D = 13,
-		SPACECRAFT_3D = 14,
-		Multirotor_Thrust_Vector = 16,
+		Multirotor_Thrust_Vector = 1,
 	};
 
 	enum class FailureMode {

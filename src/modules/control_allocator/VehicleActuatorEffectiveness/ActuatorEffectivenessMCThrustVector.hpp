@@ -40,7 +40,7 @@
 #include <uORB/topics/servo_angle.h>
 #include <uORB/topics/roll_pitch_setpoint.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
-
+#include <quad_prog/QuadProg.hpp>
 class ActuatorEffectivenessMCThrustVector : public ModuleParams, public ActuatorEffectiveness
 {
 public:
@@ -51,7 +51,7 @@ public:
 
 	void getDesiredAllocationMethod(AllocationMethod allocation_method_out[MAX_NUM_MATRICES]) const override
 	{
-		allocation_method_out[0] = AllocationMethod::SEQUENTIAL_DESATURATION;
+		allocation_method_out[0] = AllocationMethod::THRUST_VECTOR;
 	}
 	void getNormalizeRPY(bool normalize[MAX_NUM_MATRICES]) const override
 	{

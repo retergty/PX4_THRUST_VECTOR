@@ -17,7 +17,7 @@ param set-default SENS_EN_GPSSIM 1
 param set-default SENS_EN_BAROSIM 1
 param set-default SENS_EN_MAGSIM 1
 
-param set-default CA_AIRFRAME 16
+param set-default CA_AIRFRAME 1
 param set-default CA_ROTOR_COUNT 4
 
 param set-default CA_ROTOR0_PX 0.1315

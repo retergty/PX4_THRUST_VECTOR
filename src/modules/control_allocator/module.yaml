@@ -18,22 +18,7 @@ parameters:
             type: enum
             values:
                 0: Multirotor
-                1: Fixed-wing
-                2: Standard VTOL
-                3: Tiltrotor VTOL
-                4: Tailsitter VTOL
-                5: Rover (Ackermann)
-                6: Rover (Differential)
-                7: Motors (6DOF)
-                8: Multirotor with Tilt
-                9: Custom
-                10: Helicopter (tail ESC)
-                11: Helicopter (tail Servo)
-                12: Helicopter (Coaxial)
-                13: Rover (Mecanum)
-                14: Spacecraft 2D
-                15: Spacecraft 3D
-                16: Mutlirotor With Thrust Vector
+                1: Mutlirotor With Thrust Vector
             default: 0
 
         CA_METHOD:
