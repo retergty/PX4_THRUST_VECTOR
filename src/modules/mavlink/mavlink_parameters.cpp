@@ -308,7 +308,7 @@ MavlinkParametersManager::send()
 		param_find("SENS_BOARD_Z_OFF");
 		param_find("SENS_DPRES_OFF");
 		param_find("TRIG_MODE");
-		param_find("UAVCAN_ENABLE");
+		param_find("JOICAN_ENABLE");
 
 		// parameter only used in startup script but should show on ground station
 		param_find("SYS_PARAM_VER");

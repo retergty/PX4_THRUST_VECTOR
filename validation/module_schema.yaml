@@ -231,7 +231,7 @@ actuator_output:
     schema:
         show_subgroups_if:
             # condition: ui only shows the groups if this condition is true
-            # (e.g. 'UAVCAN_ENABLE>=3')
+            # (e.g. 'JOINTCAN_ENABLE>=3')
             type: string
             regex: &condition_regex "^(true|false|[\\.\\-a-zA-Z0-9_]{1,16}(>|>=|==|!=|<|<=)\\-?\\d+)$"
 

@@ -144,6 +144,6 @@
                 "/opt/ros/humble/local/lib/python3.10/dist-packages"
         ],
         "[cpp]": {
-                "editor.defaultFormatter": "chiehyu.vscode-astyle"
+                "editor.defaultFormatter": "ms-vscode.cpptools"
         },
 }

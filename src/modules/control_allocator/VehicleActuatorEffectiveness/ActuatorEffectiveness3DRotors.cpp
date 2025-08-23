@@ -185,6 +185,7 @@ ActuatorEffectiveness3DRotors::computeEffectivenessMatrix(const Geometry &geomet
 
 		// Get coefficients
 		float km = geometry.rotors[i].moment_ratio;
+		(void)km;
 
 		Dcmf motor_R = _motor_q[i];
 
@@ -192,11 +193,11 @@ ActuatorEffectiveness3DRotors::computeEffectivenessMatrix(const Geometry &geomet
 
 		for (int j = 0; j < 3; ++j) {
 			const Vector3f axis = motor_R.col(j);
-			effectiveness.slice<3, 1>(0, 3 * i + j) = position.cross(axis);//- km * axis;
+			effectiveness.slice<3, 1>(0, 3 * i + j) = position.cross(axis) - km * axis;
 
-			if (j == 2) {
-				effectiveness.slice<3, 1>(0, 3 * i + j) += -km * axis;
-			}
+			// if (j == 2) {
+			// 	effectiveness.slice<3, 1>(0, 3 * i + j) += -km * axis;
+			// }
 		}
 	}
 

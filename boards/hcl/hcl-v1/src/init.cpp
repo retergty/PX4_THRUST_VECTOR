@@ -62,6 +62,7 @@
 #include <nuttx/mm/gran.h>
 #include <chip.h>
 #include <stm32_uart.h>
+#include <stm32_dtcm.h>
 #include <arch/board/board.h>
 #include "arm_internal.h"
 
@@ -114,6 +115,8 @@ __EXPORT void board_peripheral_reset(int ms)
 	/* switch the peripheral rail back on */
 	board_control_spi_sensors_power(true, 0xffff);
 	VDD_5V_PERIPH_EN(true);
+	CAN1_SLIENT_EN(false);
+	CAN2_SLIENT_EN(false);
 
 }
 
@@ -153,10 +156,20 @@ __EXPORT void board_on_reset(int status)
  *   and mapped but before any devices have been initialized.
  *
  ************************************************************************************/
+extern uint32_t _start_itcm;
+extern uint32_t _end_itcm;
+extern uint32_t _load_itcm;
 
 extern "C" __EXPORT void
 stm32_boardinitialize(void)
 {
+	const uint32_t *src;
+	uint32_t *dest;
+
+	for (src = &_load_itcm, dest = &_start_itcm; dest < &_end_itcm;) {
+		*dest++ = *src++;
+	}
+
 	board_on_reset(-1); /* Reset PWM first thing */
 
 	/* configure LEDs */
@@ -171,6 +184,9 @@ stm32_boardinitialize(void)
 	/* configure USB interfaces */
 
 	stm32_usbinitialize();
+
+	// init dtcm heap
+	dtcm_initialize();
 }
 
 /****************************************************************************
@@ -200,7 +216,7 @@ stm32_boardinitialize(void)
 
 __EXPORT int board_app_initialize(uintptr_t arg)
 {
-	#if !defined(BOOTLOADER)
+#if !defined(BOOTLOADER)
 	/* Power on Interfaces */
 	VDD_5V_PERIPH_EN(true);
 	VDD_5V_HIPOWER_EN(true);
@@ -258,14 +274,14 @@ __EXPORT int board_app_initialize(uintptr_t arg)
 
 #  endif /* CONFIG_MMCSD */
 
-/*
-	ret = mcp23009_register_gpios(3, 0x25);
+	/*
+		ret = mcp23009_register_gpios(3, 0x25);
 
-	if (ret != OK) {
-		led_on(LED_RED);
-		return ret;
-	}
-*/
+		if (ret != OK) {
+			led_on(LED_RED);
+			return ret;
+		}
+	*/
 #endif
 	return OK;
 }

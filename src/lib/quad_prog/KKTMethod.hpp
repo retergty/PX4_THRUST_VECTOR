@@ -32,6 +32,8 @@ public:
     ~KKTMethod() = default;
     void InitProblemMatrix(const Matrix<Scalar, DIMISIONS, EQST> &CE, const Vector<Scalar, DIMISIONS> &g0, const Matrix<Scalar, DIMISIONS, DIMISIONS> &G_inv)
     {
+        G_inv_ = G_inv;
+        CE_ = CE;
         A_.Decomposition(CE.transpose() * G_inv * CE);
         B_ = -CE.transpose() * G_inv * g0;
         C_ = -G_inv * g0;
@@ -49,7 +51,11 @@ public:
     {
         return x_;
     }
-
+    void UpdateLinearPart(const Vector<Scalar, DIMISIONS> &g0)
+    {
+        B_ = -CE_.transpose() * G_inv_ * g0;
+        C_ = -G_inv_ * g0;
+    }
 private:
     Scalar error_bound_;
 
@@ -61,6 +67,11 @@ private:
     Matrix<Scalar, DIMISIONS, EQST> D_;     // D = -G^-1 * CE
 
     Vector<Scalar, DIMISIONS> x_;
+
+
+    // saved G_inv, CE to support change g0
+    Matrix<Scalar, DIMISIONS, DIMISIONS> G_inv_;
+    Matrix<Scalar, DIMISIONS, EQST> CE_;
 };
 
 template <typename Scalar, int DIMISIONS>

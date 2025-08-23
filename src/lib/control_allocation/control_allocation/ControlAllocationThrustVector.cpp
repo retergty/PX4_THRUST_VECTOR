@@ -56,7 +56,8 @@ ControlAllocationThrustVector::setEffectivenessMatrix(
 void ControlAllocationThrustVector::print_status()
 {
 	ControlAllocation::print_status();
-	PX4_INFO("Quad Programming.");
+	PX4_INFO("Quad Programming. Size of ControlAllocationThrustVector: %d",
+		 static_cast<int>(sizeof(ControlAllocationThrustVector)));
 	PX4_INFO("Last QP Success %d", _last_qp_success);
 	PX4_INFO("QP iteration count %d", _qp.GetIterationCount());
 	PX4_INFO("QP optimal Vector");
@@ -71,8 +72,8 @@ ControlAllocationThrustVector::updateQPState()
 		matrix::Vector<float, 12> g0;
 		matrix::Matrix<float, 12, 6> CE = _effectiveness.transpose();
 		matrix::Vector<float, 6> ce0 = -(_control_sp - _control_trim);
-		matrix::Matrix<float, 12, 4> CI;
-		matrix::Vector<float, 4> ci0;
+		matrix::Matrix<float, 12, 8> CI;
+		matrix::Vector<float, 8> ci0;
 
 		G.setIdentity();
 
@@ -88,10 +89,17 @@ ControlAllocationThrustVector::updateQPState()
 			CI(3 * i + 2, i) = -1;
 		}
 
+		for (int i = 0; i < 4; ++i) {
+			CI(3 * i, i + 4) = 1;
+		}
+
 		ci0.setZero();
 
 		_qp.init(G, g0, CE, ce0, CI, ci0);
 		_qp_need_reinitialise = false;
+
+		_safe_actuator_sp.setZero();
+		_safe_actuator_sp(2) = _safe_actuator_sp(5) = _safe_actuator_sp(8) = _safe_actuator_sp(11) = -0.05;
 	}
 }
 
@@ -104,24 +112,28 @@ ControlAllocationThrustVector::allocate()
 	_prev_actuator_sp = _actuator_sp;
 
 	//allocate
-	matrix::Vector<float, 4> ci0;
-	//ci0.setZero();
-	ci0.setAll(-0.1);
+	matrix::Vector<float, 8> ci0;
+	ci0.setZero();
+	ci0(0) = ci0(1) = ci0(2) = ci0(3) = -0.05;
+	//ci0.setAll(-0.1);
 	_control_sp(0) /= 4;
 	_control_sp(1) /= 4;
-	_control_sp(2) /= 4;
+	_control_sp(2) /= 2;
 	_control_sp(3) *= 30;
 	_control_sp(4) *= 30;
 	_control_sp(5) *= 30;
+
 	_qp.UpdateVectorConstrains(-(_control_sp - _control_trim), ci0);
 
 	if (_qp.Solve()) {
 		_last_qp_success = true;
+		_actuator_sp = _qp.GetOptimalVector();
 
 	} else {
 		_last_qp_success = false;
+		_actuator_sp = _safe_actuator_sp;
 	}
 
-	_actuator_sp = _qp.GetOptimalVector();
+
 
 }

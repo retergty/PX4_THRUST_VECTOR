@@ -38,6 +38,8 @@
 
 using namespace time_literals;
 
+#define CONSTRAINED_FLASH
+
 FlightModeManager::FlightModeManager() :
 	ModuleParams(nullptr),
 	WorkItem(MODULE_NAME, px4::wq_configurations::nav_and_controllers)

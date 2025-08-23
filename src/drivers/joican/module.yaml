@@ -1,0 +1,19 @@
+module_name: JOICAN
+actuator_output:
+  show_subgroups_if: 'JOICAN_ENABLE>=3'
+  config_parameters:
+    - param: 'JOICAN_ENABLE'
+      label: 'Configure'
+      function: 'enable'
+    - param: 'JOICAN_BITRATE'
+      label: 'Bitrate'
+  output_groups:
+    - param_prefix: JOICAN_SV
+      group_label: 'Servos'
+      channel_label: 'Servo'
+      standard_params:
+        disarmed: { min: 0, max: 1000, default: 500 }
+        min: { min: 0, max: 1000, default: 0 }
+        max: { min: 0, max: 1000, default: 1000 }
+        failsafe: { min: 0, max: 1000 }
+      num_channels: 8

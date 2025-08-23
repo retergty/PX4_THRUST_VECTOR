@@ -50,13 +50,6 @@ list(APPEND flight_tasks_all
 	Transition
 )
 
-if(NOT px4_constrained_flash_build)
-	list(APPEND flight_tasks_all
-		AutoFollowTarget
-		Orbit
-	)
-endif()
-
 # set the files to be generated
 set(files_to_generate
 	FlightTasks_generated.hpp

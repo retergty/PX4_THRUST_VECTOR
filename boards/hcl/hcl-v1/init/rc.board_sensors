@@ -10,7 +10,7 @@ fi
 board_adc start
 
 icm42688p -R 8 -s -b 1 start
-icm42688p -R 8 -s -1 4 start
+icm42688p -R 8 -s -b 4 start
 
 ist8310 -I -b 3 -R 2 -a 0x0e start
 

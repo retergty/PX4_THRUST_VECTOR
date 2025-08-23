@@ -1,0 +1,7 @@
+module_name: SERIAL TEST
+serial_config:
+
+    - command: serial_test start -d ${SERIAL_DEV} -b p:${BAUD_PARAM}
+      port_config_param:
+        name: SER_TES_CONFIG
+        group: Serial

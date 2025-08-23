@@ -146,10 +146,12 @@ SECTIONS
 		_bootdelay_signature = ABSOLUTE(.);
 		FILL(0xffecc2925d7d05c5)
 		. += 8;
+		/*EXCLUDE_FILE (*ControlAllocation.a *modules__mc_rate_control.a *vehicle_angular_velocity.a ) *(.text .text.*)*/
 		*(.text .text.*)
 		*(.fixup)
 		*(.gnu.warning)
-		*(.rodata .rodata.*)
+		/*EXCLUDE_FILE (*ControlAllocation.a *modules__mc_rate_control.a *vehicle_angular_velocity.a) *( .rodata .rodata.*)*/
+		*( .rodata .rodata.*)
 		*(.gnu.linkonce.t.*)
 		*(.glue_7)
 		*(.glue_7t)
@@ -159,6 +161,17 @@ SECTIONS
 		_etext = ABSOLUTE(.);
 
 	} > FLASH
+
+	.itcm_code : {
+		_start_itcm = ABSOLUTE(.);
+		. = ALIGN(4);
+		*control_allocator.a:*(.text* .rodata*)
+		*ControlAllocation.a:*(.text* .rodata*)
+		*vehicle_angular_velocity.a:*(.text* .rodata*)
+		*modules__mc_rate_control.a:*(.text* .rodata*)
+		_end_itcm = ABSOLUTE(.);
+	} > ITCM_RAM AT > FLASH
+	_load_itcm = LOADADDR(.itcm_code);
 
 	/*
 	 * Init functions (static constructors and the like)
@@ -212,6 +225,7 @@ SECTIONS
 		. = ALIGN(4);
 		_sram4_heap_start = ABSOLUTE(.);
 	} > SRAM4
+
 
 	/* Stabs debugging sections. */
 	.stab 0 : { *(.stab) }

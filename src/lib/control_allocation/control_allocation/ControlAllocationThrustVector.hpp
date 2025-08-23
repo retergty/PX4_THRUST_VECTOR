@@ -5,7 +5,7 @@
 class ControlAllocationThrustVector: public ControlAllocation
 {
 public:
-	static constexpr float FzFactor = 20;
+	static constexpr float FzFactor = 5;
 	ControlAllocationThrustVector() = default;
 	virtual ~ControlAllocationThrustVector() = default;
 
@@ -18,6 +18,7 @@ public:
 		return _effectiveness * _qp.GetOptimalVector();
 	}
 	void print_status() override;
+
 protected:
 	/**
 	 * update qp state if required.
@@ -26,7 +27,8 @@ protected:
 	void updateQPState();
 
 private:
-	QuadProg<float, 12, 6, 4> _qp;
+	QuadProg<float, 12, 6, 8> _qp;
+	matrix::Vector<float, NUM_ACTUATORS> _safe_actuator_sp;  	///< Actuator setpoint
 	bool _last_qp_success{true};
 	bool _qp_need_reinitialise{false};
 };

@@ -174,15 +174,18 @@
 /* Power supply control and monitoring GPIOs */
 #define BOARD_NUMBER_BRICKS             1
 
-#define GPIO_VDD_5V_PERIPH_nEN          /* PD2  */ (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_SET|GPIO_PORTD|GPIO_PIN2)
+#define GPIO_VDD_5V_PERIPH_EN          /* PD2  */ (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_SET|GPIO_PORTD|GPIO_PIN2)
 #define GPIO_VDD_5V_PERIPH_nOC          /* PA15 */ (GPIO_INPUT |GPIO_FLOAT|GPIO_PORTA|GPIO_PIN15)
-#define GPIO_VDD_5V_HIPOWER_nEN         /* PC8 */ (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN8)
+#define GPIO_VDD_5V_HIPOWER_EN         /* PC8 */ (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN8)
 #define GPIO_VDD_5V_HIPOWER_nOC         /* PE10 */ (GPIO_INPUT |GPIO_FLOAT|GPIO_PORTE|GPIO_PIN10)
-
+#define GPIO_CAN1_SLIENT		/* PC12 */ (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_SET|GPIO_PORTC|GPIO_PIN12)
+#define GPIO_CAN2_SLIENT		/* PG2 */  (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_2MHz|GPIO_OUTPUT_SET|GPIO_PORTG|GPIO_PIN2)
 /* Define True logic Power Control in arch agnostic form */
 
-#define VDD_5V_PERIPH_EN(on_true)          px4_arch_gpiowrite(GPIO_VDD_5V_PERIPH_nEN, !(on_true))
-#define VDD_5V_HIPOWER_EN(on_true)         px4_arch_gpiowrite(GPIO_VDD_5V_HIPOWER_nEN, !(on_true))
+#define VDD_5V_PERIPH_EN(on_true)          px4_arch_gpiowrite(GPIO_VDD_5V_PERIPH_EN, (on_true))
+#define VDD_5V_HIPOWER_EN(on_true)         px4_arch_gpiowrite(GPIO_VDD_5V_HIPOWER_EN, (on_true))
+#define CAN1_SLIENT_EN(on_true)            px4_arch_gpiowrite(GPIO_CAN1_SLIENT, (on_true))
+#define CAN2_SLIENT_EN(on_true)            px4_arch_gpiowrite(GPIO_CAN2_SLIENT, (on_true))
 
 /* USB OTG FS
  *
@@ -286,13 +289,11 @@
 
 #define PX4_GPIO_INIT_LIST { \
 		PX4_ADC_GPIO,                     \
-		GPIO_CAN1_TX,                     \
-		GPIO_CAN1_RX,                     \
-		GPIO_CAN2_TX,                     \
-		GPIO_CAN2_RX,                     \
-		GPIO_VDD_5V_PERIPH_nEN,           \
+		GPIO_CAN1_SLIENT,		  \
+		GPIO_CAN2_SLIENT,		  \
+		GPIO_VDD_5V_PERIPH_EN,           \
 		GPIO_VDD_5V_PERIPH_nOC,           \
-		GPIO_VDD_5V_HIPOWER_nEN,          \
+		GPIO_VDD_5V_HIPOWER_EN,          \
 		GPIO_VDD_5V_HIPOWER_nOC          \
 	}
 
