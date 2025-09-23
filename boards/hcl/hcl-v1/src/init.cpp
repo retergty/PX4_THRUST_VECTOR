@@ -220,6 +220,8 @@ __EXPORT int board_app_initialize(uintptr_t arg)
 	/* Power on Interfaces */
 	VDD_5V_PERIPH_EN(true);
 	VDD_5V_HIPOWER_EN(true);
+	CAN1_SLIENT_EN(false);
+	CAN2_SLIENT_EN(false);
 
 	/* Need hrt running before using the ADC */
 

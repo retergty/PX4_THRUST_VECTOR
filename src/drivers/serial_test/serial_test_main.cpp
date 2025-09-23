@@ -2,64 +2,8 @@
 #include <px4_platform_common/getopt.h>
 #include <px4_platform_common/module.h>
 
-namespace serial_test
-{
-SerialTest *g_dev{nullptr};
-
-static int start(const char *port,const int baudrate = 115200)
-{
-	if (g_dev != nullptr) {
-		PX4_WARN("already started");
-		return -1;
-	}
-
-	if (port == nullptr) {
-		PX4_ERR("no device specified");
-		return -1;
-	}
-
-	/* create the driver */
-	g_dev = new SerialTest(port,baudrate);
-
-	if (g_dev == nullptr) {
-		return -1;
-	}
-
-	if (g_dev->init() != PX4_OK) {
-		delete g_dev;
-		g_dev = nullptr;
-		return -1;
-	}
-
-	return 0;
-}
-
-static int stop()
-{
-	if (g_dev != nullptr) {
-		delete g_dev;
-		g_dev = nullptr;
-
-	} else {
-		return -1;
-	}
-
-	return 0;
-}
-
-static int status()
-{
-	if (g_dev == nullptr) {
-		PX4_ERR("driver not running");
-		return -1;
-	}
-
-	g_dev->print_info();
-
-	return 0;
-}
-
-static int usage()
+static constexpr int TASK_STACK_SIZE = PX4_STACK_ADJUSTED(2040);
+int SerialTest::print_usage(const char *reason)
 {
 	PRINT_MODULE_DESCRIPTION(
 		R"DESCR_STR(
@@ -81,22 +25,39 @@ $ imu_forward stop
 	PRINT_MODULE_USAGE_COMMAND_DESCR("stop", "Stop driver");
 	return PX4_OK;
 }
+int SerialTest::print_status()
+{
+	print_info();
+	return 0;
+}
+int SerialTest::task_spawn(int argc, char *argv[])
+{
+	int task_id = px4_task_spawn_cmd("serial_test", SCHED_DEFAULT,
+				   SCHED_PRIORITY_SLOW_DRIVER, TASK_STACK_SIZE,
+				   run_trampoline, (char *const *)argv);
 
-} // namespace
+	if (task_id < 0) {
+		_task_id = -1;
+		return -errno;
+	}
+		_task_id = task_id;
 
-extern "C" __EXPORT int serial_test_main(int argc, char *argv[])
+	return 0;
+}
+SerialTest *SerialTest::instantiate(int argc, char *argv[])
 {
 	const char *device_path = nullptr;
 	int baudrate;
 	int ch;
 	int myoptind = 1;
 	const char *myoptarg = nullptr;
-
+	bool error_flag = false;
 	while ((ch = px4_getopt(argc, argv, "b:d:", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
 		case 'b':
 			if (px4_get_parameter_value(myoptarg, baudrate) != 0) {
 				PX4_ERR("baudrate parsing failed");
+				error_flag = true;
 			}
 			break;
 		case 'd':
@@ -104,27 +65,43 @@ extern "C" __EXPORT int serial_test_main(int argc, char *argv[])
 			break;
 
 		default:
-			serial_test::usage();
-			return -1;
+			PX4_WARN("unrecognized flag");
+			error_flag = true;
+			break;
 		}
 	}
 
-	if (myoptind >= argc) {
-		serial_test::usage();
-		return -1;
+	if(error_flag)
+	{
+		return nullptr;
 	}
 
-	if (!strcmp(argv[myoptind], "start")) {
-		return serial_test::start(device_path,baudrate);
+	SerialTest * serial_test = nullptr;
+	/* create the driver */
 
-	} else if (!strcmp(argv[myoptind], "stop")) {
-		return serial_test::stop();
-
-	} else if (!strcmp(argv[myoptind], "status")) {
-		return serial_test::status();
+	serial_test = new SerialTest(device_path,baudrate);
+	if (serial_test->init() != PX4_OK) {
+		delete serial_test;
+		serial_test = nullptr;
+		return nullptr;
 	}
 
-	serial_test::usage();
-	return -1;
+	return serial_test;
+}
+int
+SerialTest::custom_command(int argc, char *argv[])
+{
+	// Check if the driver is running.
+	if (!is_running()) {
+		PX4_INFO("not running");
+		return PX4_ERROR;
+	}
+
+	return print_usage("unknown command");
+}
+
+extern "C" __EXPORT int serial_test_main(int argc, char *argv[])
+{
+	return SerialTest::main(argc, argv);
 }
 

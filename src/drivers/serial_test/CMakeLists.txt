@@ -39,6 +39,7 @@ px4_add_module(
 		serial_test.cpp
 		serial_test.hpp
 		serial_test_main.cpp
+		serial_test_receiver.cpp
 	MODULE_CONFIG
 		module.yaml
 	DEPENDS

@@ -1,4 +1,7 @@
 #include "joican_raw_can_driver.hpp"
+
+#include "arm_internal.h"
+#include "stm32.h"
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
@@ -12,6 +15,8 @@
 #include "stm32.h"
 
 #include "ring_buffer.hpp"
+
+#define JOICAN_DEBUG 0
 
 namespace joican
 {
@@ -213,6 +218,14 @@ struct fdcan_driver_s {
 	sem_t receive_sem;
 
 	RingBuffer<can_frame, NUM_RX_FIFO0> rx_buf;
+
+#if JOICAN_DEBUG==1
+	int _re_count {0};
+	int _re_lost{0};
+	int _re_error{0};
+
+	int _send_count{0};
+#endif
 };
 
 /****************************************************************************
@@ -620,6 +633,9 @@ static void fdcan_receive(struct fdcan_driver_s *priv)
 
 	} else {
 		//"ERROR: Bad RX IR flags";
+#if JOICAN_DEBUG==1
+		priv->_re_error++;
+#endif
 		return;
 	}
 
@@ -645,12 +661,18 @@ static void fdcan_receive(struct fdcan_driver_s *priv)
 
 	if ((*rxfnc & FDCAN_RXF0C_F0S) == 0) {
 		//("ERROR: No RX FIFO elements allocated");
+#if JOICAN_DEBUG==1
+		priv->_re_error++;
+#endif
 		return;
 	}
 
 	/* Check for message lost; count an error */
 
 	if ((*rxfns & FDCAN_RXF0S_RF0L) != 0) {
+#if JOICAN_DEBUG==1
+		priv->_re_lost++;
+#endif
 		return;
 	}
 
@@ -660,6 +682,9 @@ static void fdcan_receive(struct fdcan_driver_s *priv)
 
 	if (n_elem == 0) {
 		//("RX interrupt but 0 frames available");
+#if JOICAN_DEBUG==1
+		priv->_re_error++;
+#endif
 		return;
 	}
 
@@ -667,7 +692,9 @@ static void fdcan_receive(struct fdcan_driver_s *priv)
 
 	while ((*rxfns & FDCAN_RXF0S_F0FL) > 0) {
 		/* Copy the frame from message RAM */
-
+#if JOICAN_DEBUG==1
+		priv->_re_count++;
+#endif
 		const uint8_t index = (*rxfns & FDCAN_RXF0S_F0GI) >> FDCAN_RXF0S_F0GI_SHIFT;
 
 		rf = &priv->rx[index];
@@ -696,7 +723,7 @@ static void fdcan_receive(struct fdcan_driver_s *priv)
 		priv->rx_buf.push(frame);
 	}
 
-	sem_post(&priv->receive_sem);
+	//sem_post(&priv->receive_sem);
 	/* Write the corresponding interrupt bits to reset these interrupts */
 	putreg32(irflags, priv->base + STM32_FDCAN_IR_OFFSET);
 }
@@ -814,77 +841,93 @@ static void fdcan_reset(struct fdcan_driver_s *priv)
 
 	leave_critical_section(flags);
 }
-
-int CanDriver::print_status()
+static void CanRegisterDump(const struct fdcan_driver_s *const priv)
 {
-	PX4_INFO("stm32h7 fdcan base address:%08x", (int)_priv->base);
+	PX4_INFO("stm32h7 fdcan base address:%08x", (int)priv->base);
 
-	int CCCR = getreg32(_priv->base + STM32_FDCAN_CCCR_OFFSET);
+	int CCCR = getreg32(priv->base + STM32_FDCAN_CCCR_OFFSET);
 	PX4_INFO("CCCR register: %08x", CCCR);
 
-	int ECR = getreg32(_priv->base + STM32_FDCAN_ECR_OFFSET);
+	int ECR = getreg32(priv->base + STM32_FDCAN_ECR_OFFSET);
 	const uint8_t cel = (uint8_t)(ECR >> FDCAN_ECR_CEL_SHIFT);
 	PX4_INFO("ECR register: %08x, cel: %d", ECR, cel);
 
-	int IER = getreg32(_priv->base + STM32_FDCAN_IE_OFFSET);
+	int IER = getreg32(priv->base + STM32_FDCAN_IE_OFFSET);
 	PX4_INFO("IE register: %08x", IER);
 
-	int TXBTO = getreg32(_priv->base + STM32_FDCAN_TXBTO_OFFSET);
+	int TXBTO = getreg32(priv->base + STM32_FDCAN_TXBTO_OFFSET);
 	PX4_INFO("TXBTO register: %08x", TXBTO);
 
-	int TXBAR = getreg32(_priv->base + STM32_FDCAN_TXBAR_OFFSET);
+	int TXBAR = getreg32(priv->base + STM32_FDCAN_TXBAR_OFFSET);
 	PX4_INFO("TXBAR register: %08x", TXBAR);
 
-	int TXBCR = getreg32(_priv->base + STM32_FDCAN_TXBCR_OFFSET);
+	int TXBCR = getreg32(priv->base + STM32_FDCAN_TXBCR_OFFSET);
 	PX4_INFO("TXBCR register: %08x", TXBCR);
 
-	int TXBCF = getreg32(_priv->base + STM32_FDCAN_TXBCF_OFFSET);
+	int TXBCF = getreg32(priv->base + STM32_FDCAN_TXBCF_OFFSET);
 	PX4_INFO("TXBCF register: %08x", TXBCF);
 
-	int TXFQS = getreg32(_priv->base + STM32_FDCAN_TXFQS_OFFSET);
+	int TXFQS = getreg32(priv->base + STM32_FDCAN_TXFQS_OFFSET);
 	PX4_INFO("TXFQS register: %08x", TXFQS);
 
-	int TXBC = getreg32(_priv->base + STM32_FDCAN_TXBC_OFFSET);
+	int TXBC = getreg32(priv->base + STM32_FDCAN_TXBC_OFFSET);
 	PX4_INFO("TXBC register: %08x", TXBC);
 
-	int NBTP = getreg32(_priv->base + STM32_FDCAN_NBTP_OFFSET);
+	int NBTP = getreg32(priv->base + STM32_FDCAN_NBTP_OFFSET);
 	PX4_INFO("NBTP register: %08x", NBTP);
 
-	int TXBTIE = getreg32(_priv->base + STM32_FDCAN_TXBTIE_OFFSET);
+	int TXBTIE = getreg32(priv->base + STM32_FDCAN_TXBTIE_OFFSET);
 	PX4_INFO("TXBTIE register: %08x", TXBTIE);
 
-	int SIDFC = getreg32(_priv->base + STM32_FDCAN_SIDFC_OFFSET);
+	int SIDFC = getreg32(priv->base + STM32_FDCAN_SIDFC_OFFSET);
 	PX4_INFO("SIDFC register: %08x", SIDFC);
 
-	int XIDFC = getreg32(_priv->base + STM32_FDCAN_XIDFC_OFFSET);
+	int XIDFC = getreg32(priv->base + STM32_FDCAN_XIDFC_OFFSET);
 	PX4_INFO("XIDFC register: %08x", XIDFC);
 
-	int RXESC = getreg32(_priv->base + STM32_FDCAN_RXESC_OFFSET);
+	int RXESC = getreg32(priv->base + STM32_FDCAN_RXESC_OFFSET);
 	PX4_INFO("RXESC register: %08x", RXESC);
 
-	int TXESC = getreg32(_priv->base + STM32_FDCAN_TXESC_OFFSET);
+	int TXESC = getreg32(priv->base + STM32_FDCAN_TXESC_OFFSET);
 	PX4_INFO("TXESC register: %08x", TXESC);
 
-	int RXF0C = getreg32(_priv->base + STM32_FDCAN_RXF0C_OFFSET);
+	int RXF0C = getreg32(priv->base + STM32_FDCAN_RXF0C_OFFSET);
 	PX4_INFO("RXF0C register: %08x", RXF0C);
 
-	int RXF1C = getreg32(_priv->base + STM32_FDCAN_RXF1C_OFFSET);
+	int RXF1C = getreg32(priv->base + STM32_FDCAN_RXF1C_OFFSET);
 	PX4_INFO("RXF1C register: %08x", RXF1C);
 
-	int RXBC = getreg32(_priv->base + STM32_FDCAN_RXBC_OFFSET);
+	int RXBC = getreg32(priv->base + STM32_FDCAN_RXBC_OFFSET);
 	PX4_INFO("RXBC register: %08x", RXBC);
 
-	int TXEFC = getreg32(_priv->base + STM32_FDCAN_TXEFC_OFFSET);
+	int TXEFC = getreg32(priv->base + STM32_FDCAN_TXEFC_OFFSET);
 	PX4_INFO("TXEFC register: %08x", TXEFC);
 
-	int TXEFS = getreg32(_priv->base + STM32_FDCAN_TXEFS_OFFSET);
+	int TXEFS = getreg32(priv->base + STM32_FDCAN_TXEFS_OFFSET);
 	PX4_INFO("TXEFS register: %08x", TXEFS);
 
-	int GFC = getreg32(_priv->base + STM32_FDCAN_GFC_OFFSET);
+	int GFC = getreg32(priv->base + STM32_FDCAN_GFC_OFFSET);
 	PX4_INFO("GFC register: %08x", GFC);
 
-	int PSR = getreg32(_priv->base + STM32_FDCAN_PSR_OFFSET);
+	int PSR = getreg32(priv->base + STM32_FDCAN_PSR_OFFSET);
 	PX4_INFO("PSR register: %08x", PSR);
+
+	int TEST = getreg32(priv->base + STM32_FDCAN_TEST_OFFSET);
+	PX4_INFO("TEST register: %08x", TEST);
+
+
+	int RXF0S = getreg32(priv->base + STM32_FDCAN_RXF0S_OFFSET);
+	PX4_INFO("RXF0S register: %08x", RXF0S);
+}
+int CanDriver::print_status()
+{
+	CanRegisterDump(_priv);
+#if JOICAN_DEBUG==1
+	PX4_INFO("received frame in candriver %d", _priv->_re_count);
+	PX4_INFO("received frame lost count %d", _priv->_re_lost);
+	PX4_INFO("received frame error count %d", _priv->_re_error);
+	PX4_INFO("send frame count %d", _priv->_send_count);
+#endif
 	return 0;
 }
 int CanDriver::initCan(uint32_t index)
@@ -944,6 +987,7 @@ int CanDriver::start()
 	struct fdcan_driver_s *const priv = _priv;
 
 	if (priv == nullptr) {
+		PX4_ERR("can start priv == NULL\n");
 		return -1;
 	}
 
@@ -979,6 +1023,7 @@ int CanDriver::start()
 
 	if (fdcan_bittiming(&priv->arbi_timing) != OK) {
 		fdcan_setinit(priv->base, 0);
+		PX4_ERR("can bittiming fail\n");
 		leave_critical_section(flags);
 		return -EIO;
 	}
@@ -1071,7 +1116,7 @@ int CanDriver::start()
 
 	/* Standard ID Filters: Allow space for 128 filters (128 words) */
 
-	const uint8_t n_stdid = 128;
+	const uint8_t n_stdid = 0;
 	priv->message_ram.filt_stdid_addr = gl_ram_base + ram_offset * WORD_LENGTH;
 
 	regval = (n_stdid << FDCAN_SIDFC_LSS_SHIFT) & FDCAN_SIDFC_LSS_MASK;
@@ -1081,7 +1126,7 @@ int CanDriver::start()
 
 	/* Extended ID Filters: Allow space for 128 filters (128 words) */
 
-	const uint8_t n_extid = 128;
+	const uint8_t n_extid = 0;
 	priv->message_ram.filt_extid_addr = gl_ram_base + ram_offset * WORD_LENGTH;
 
 	regval = (n_extid << FDCAN_XIDFC_LSE_SHIFT) & FDCAN_XIDFC_LSE_MASK;
@@ -1171,8 +1216,7 @@ int16_t CanDriver::send(const can_frame &frame)
 		return -ENODEV;
 	}
 
-	/* Do we need critical section? */
-	// irqstate_t flags = enter_critical_section();
+	irqstate_t flags = enter_critical_section();
 
 	/* First, check if there are any slots available in the queue */
 
@@ -1180,6 +1224,7 @@ int16_t CanDriver::send(const can_frame &frame)
 
 	if ((regval & FDCAN_TXFQS_TFQF) == FDCAN_TXFQS_TFQF) {
 		/* Tx FIFO / Queue is full */
+		leave_critical_section(flags);
 		return -EBUSY;
 	}
 
@@ -1192,6 +1237,7 @@ int16_t CanDriver::send(const can_frame &frame)
 
 	if (mbi >= NUM_TX_FIFO) {
 		PX4_ERR("Invalid Tx mailbox index encountered in transmit\n");
+		leave_critical_section(flags);
 		return -EIO;
 	}
 
@@ -1227,14 +1273,104 @@ int16_t CanDriver::send(const can_frame &frame)
 
 	/* GO - Submit the transmission request for this element */
 
-	// we need critical section serve as memory barriers
-	irqstate_t flags = enter_critical_section();
 	putreg32(1 << mbi, priv->base + STM32_FDCAN_TXBAR_OFFSET);
 	leave_critical_section(flags);
 
 	/* Increment statistics */
 	priv->txmb[mbi].pending = TX_BUSY;
+#if JOICAN_DEBUG==1
+	priv->_send_count++;
+#endif
+	return OK;
+}
+int16_t CanDriver::send(const can_frame *frame, int num)
+{
+	struct fdcan_driver_s *const priv = _priv;
 
+	if (priv == nullptr) {
+		return -ENODEV;
+	}
+
+	if (num < 1) {
+		return -EIO;
+	}
+
+	irqstate_t flags = enter_critical_section();
+
+	/* First, check if there are any slots available in the queue */
+
+	uint32_t regval = getreg32(priv->base + STM32_FDCAN_TXFQS_OFFSET);
+
+	if ((regval & FDCAN_TXFQS_TFQF) == FDCAN_TXFQS_TFQF) {
+		/* Tx FIFO / Queue is full */
+		leave_critical_section(flags);
+		return -EBUSY;
+	}
+
+	/* Next, get the next available FIFO index from the controller */
+
+	regval = getreg32(priv->base + STM32_FDCAN_TXFQS_OFFSET);
+	const uint8_t mbi = (regval & FDCAN_TXFQS_TFQPI) >> FDCAN_TXFQS_TFQPI_SHIFT;
+	const uint8_t tffl = (regval & FDCAN_TXFQS_TFFL) >> FDCAN_TXFQS_TFFL_SHIFT;
+
+	if (tffl < num) {
+		//no enough space
+		leave_critical_section(flags);
+		return -EIO;
+	}
+
+	uint32_t txbar_put = 0;
+
+	for (int i = 0; i < num; ++i) {
+		/* Now, we can copy the CAN frame to the FIFO (in message RAM) */
+		const uint8_t mbinow = mbi + i;
+
+		if (mbinow >= NUM_TX_FIFO) {
+			PX4_ERR("Invalid Tx mailbox index encountered in transmit\n");
+			leave_critical_section(flags);
+			return -EIO;
+		}
+
+		struct tx_fifo_s *mb = &priv->tx[mbinow];
+
+		/* Attempt to write frame */
+
+		union tx_fifo_header_u header;
+
+		if (frame[i].can_id & CAN_EFF_FLAG) {
+			header.id.xtd = 1;
+			header.id.extid = frame[i].can_id & CAN_EFF_MASK;
+
+		} else {
+			header.id.xtd = 0;
+			header.id.stdid = frame[i].can_id & CAN_SFF_MASK;
+		}
+
+		header.id.esi = frame[i].can_id & CAN_ERR_FLAG ? 1 : 0;
+		header.id.rtr = frame[i].can_id & CAN_RTR_FLAG ? 1 : 0;
+		header.dlc = frame[i].can_dlc;
+		header.brs = 0;  /* No bitrate switching */
+		header.fdf = 0;  /* Classic CAN frame, not CAN-FD */
+		header.efc = 0;  /* Don't store Tx events */
+		header.mm = mbinow; /* Mailbox Marker for our own use; just store FIFO index */
+
+		/* Store into message RAM */
+
+		mb->header.w0 = header.w0;
+		mb->header.w1 = header.w1;
+		memcpy(mb->data, frame[i].data, frame[i].can_dlc);
+
+		txbar_put |= 1 << mbinow;
+
+		/* Increment statistics */
+		priv->txmb[mbinow].pending = TX_BUSY;
+	}
+
+	putreg32(txbar_put, priv->base + STM32_FDCAN_TXBAR_OFFSET);
+	leave_critical_section(flags);
+#if JOICAN_DEBUG==1
+	priv->_send_count += num;
+#endif
 	return OK;
 }
 int16_t CanDriver::receive(can_frame &out_frame)

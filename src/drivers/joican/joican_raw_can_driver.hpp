@@ -1,8 +1,5 @@
 #pragma once
 #include <nuttx/can.h>
-#include "arm_internal.h"
-#include "stm32.h"
-
 namespace joican
 {
 #define CAN_MAX_DLEN 8
@@ -31,6 +28,11 @@ public:
 
   // non-block send
   int16_t send(const can_frame& frame);
+
+  // non-block multipul send
+  // return sended number
+  // 0 means all send
+  int16_t send(const can_frame* frame,int num);
 
   // is fifo full
   bool isFifoFull();

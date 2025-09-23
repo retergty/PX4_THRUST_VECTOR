@@ -9,6 +9,7 @@ px4_add_module(
 		joican_raw_can_driver.hpp
 		joican.cpp
 		joican.hpp
+		mit_protocol.hpp
 	MODULE_CONFIG
 		module.yaml
 	DEPENDS
