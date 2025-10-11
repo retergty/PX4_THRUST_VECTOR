@@ -42,8 +42,8 @@ px4_add_romfs_files(
 	rc.vehicle_setup
 
 	# TODO
-	rc.balloon_apps
-	rc.balloon_defaults
+	#rc.balloon_apps
+	#rc.balloon_defaults
 	rc.sysinit
 )
 
@@ -63,7 +63,7 @@ endif()
 
 if(CONFIG_MODULES_MC_RATE_CONTROL)
 	px4_add_romfs_files(
-		rc.heli_defaults
+		#rc.heli_defaults
 		rc.mc_apps
 		rc.mc_defaults
 	)

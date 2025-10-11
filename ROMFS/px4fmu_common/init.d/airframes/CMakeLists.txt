@@ -35,7 +35,7 @@ px4_add_romfs_files(
 	# [0-999] Reserved (historical)
 
 	# [18000, 18999] High-altitude balloons
-	18001_TF-B1
+	#18001_TF-B1
 
 	# [22000, 22999] Reserve for custom models
 )

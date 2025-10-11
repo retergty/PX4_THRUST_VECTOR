@@ -201,9 +201,9 @@
 #define GPIO_PPM_IN             /* PI5 T8C1 */ GPIO_TIM8_CH1IN_2
 
 /* RC Serial port */
-#define RC_SERIAL_PORT                     "/dev/ttyS8"
+#define RC_SERIAL_PORT                     "/dev/ttyS6"
 /* Some RC protocols are bi-directional, therefore we need a half-duplex UART */
-#define RC_SERIAL_SINGLEWIRE
+//#define RC_SERIAL_SINGLEWIRE //Bug Delete it
 /* The STM32 UART by default wires half-duplex mode to the TX pin, but our
  * signal in routed to the RX pin, so we need to swap the pins */
 #define RC_SERIAL_SWAP_RXTX

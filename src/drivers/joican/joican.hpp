@@ -6,14 +6,11 @@
 #include <uORB/topics/parameter_update.h>
 #include <px4_platform_common/module.h>
 #include <px4_platform_common/tasks.h>
-#include <px4_platform_common/module_params.h>
 #include <mixer_module/mixer_module.hpp>
-namespace joican
-{
 
-struct AbsPostionCtlFrame : public can_frame {
+struct AbsPostionCtlFrame : public joican::can_frame {
 	static constexpr uint8_t DataLength = 0x08;
-	static constexpr float Kp = 10.f;
+	static constexpr float Kp = 30.f;
 	static constexpr float Kd = 1.f;
 
 	static constexpr float PositionOffsetFactor = 12.5f;
@@ -79,13 +76,13 @@ struct AbsPostionCtlFrame : public can_frame {
 	};
 	void setAbsPosition(const float abs_pos)
 	{
-		uint16_t pos_int = static_cast<uint16_t>((abs_pos + PositionOffsetFactor) * PositionMultiplyFactor);
+		uint16_t pos_int = static_cast<uint16_t>((abs_pos * M_PI_F / 2 + PositionOffsetFactor) * PositionMultiplyFactor);
 		data[0] = (pos_int >> 8);
 		data[1] = pos_int;
 		return;
 	};
 };
-struct ServoEnableFrame : public can_frame {
+struct ServoEnableFrame : public joican::can_frame {
 	static constexpr uint8_t ServoEnableData[8] {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFC};
 	ServoEnableFrame(const uint32_t dev_id)
 	{
@@ -98,7 +95,7 @@ struct ServoEnableFrame : public can_frame {
 	}
 };
 
-struct ServoDisableFrame : public can_frame {
+struct ServoDisableFrame : public joican::can_frame {
 	static constexpr uint8_t ServoDisableData[8] {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFD};
 	ServoDisableFrame(const uint32_t dev_id)
 	{
@@ -125,7 +122,10 @@ struct ServoState {
 	float velocity{ 0.f };
 	float torque{ 0.f };
 	float zero_offset{ 0.f };
+	float absolute_offset{0.f}; // make mit frame relative position into absolute position
 	bool enable{0};
+	int reverse{0};
+	hrt_abstime timestamp{0};
 	uint8_t error_code;
 };
 
@@ -167,9 +167,11 @@ private:
 
 	void ServoDisable();
 
-	void updateParams() override;
+	//void updateParams() override;
 
-	void handReceiveFrame(const can_frame &frame, const uint8_t can_instance);
+	void parameters_updated();
+
+	void handReceiveFrame(const joican::can_frame &frame, const uint8_t can_instance);
 
 	void sendServoSetpoint();
 
@@ -180,9 +182,9 @@ private:
 
 	AbsPostionCtlFrame _can1_servo_posctl[4];
 	AbsPostionCtlFrame _can2_servo_posctl[4];
-
-	CanDriver _can1;
-	CanDriver _can2;
+	hrt_abstime _now_time{0};
+	joican::CanDriver _can1;
+	joican::CanDriver _can2;
 
 	int16_t _can1_last_ret[4] { 0, 0, 0, 0 };
 	int16_t _can2_last_ret[4] { 0, 0, 0, 0 };
@@ -201,5 +203,26 @@ private:
 	uORB::SubscriptionInterval _parameter_update_sub{ ORB_ID(parameter_update), 1_s };
 	perf_counter_t _cycle_perf{ perf_alloc(PC_ELAPSED, MODULE_NAME ": cycle") };
 	perf_counter_t _interval_perf{ perf_alloc(PC_INTERVAL, MODULE_NAME ": interval") };
+
+	DEFINE_PARAMETERS(
+		(ParamFloat<px4::params::JOICAN_C1S1_OFF>) _param_joican_c1s1_offset,
+		(ParamFloat<px4::params::JOICAN_C1S2_OFF>) _param_joican_c1s2_offset,
+		(ParamFloat<px4::params::JOICAN_C1S3_OFF>) _param_joican_c1s3_offset,
+		(ParamFloat<px4::params::JOICAN_C1S4_OFF>) _param_joican_c1s4_offset,
+
+		(ParamFloat<px4::params::JOICAN_C2S1_OFF>) _param_joican_c2s1_offset,
+		(ParamFloat<px4::params::JOICAN_C2S2_OFF>) _param_joican_c2s2_offset,
+		(ParamFloat<px4::params::JOICAN_C2S3_OFF>) _param_joican_c2s3_offset,
+		(ParamFloat<px4::params::JOICAN_C2S4_OFF>) _param_joican_c2s4_offset,
+
+		(ParamInt<px4::params::JOICAN_C1S1_REV>) _param_joican_c1s1_rev,
+		(ParamInt<px4::params::JOICAN_C1S2_REV>) _param_joican_c1s2_rev,
+		(ParamInt<px4::params::JOICAN_C1S3_REV>) _param_joican_c1s3_rev,
+		(ParamInt<px4::params::JOICAN_C1S4_REV>) _param_joican_c1s4_rev,
+
+		(ParamInt<px4::params::JOICAN_C2S1_REV>) _param_joican_c2s1_rev,
+		(ParamInt<px4::params::JOICAN_C2S2_REV>) _param_joican_c2s2_rev,
+		(ParamInt<px4::params::JOICAN_C2S3_REV>) _param_joican_c2s3_rev,
+		(ParamInt<px4::params::JOICAN_C2S4_REV>) _param_joican_c2s4_rev
+	)
 };
-}  // namespace joican

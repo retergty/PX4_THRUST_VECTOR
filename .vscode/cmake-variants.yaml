@@ -31,6 +31,16 @@ CONFIG:
       buildType: RelWithDebInfo
       settings:
         CONFIG: px4_sitl_test
+    hcl_hcl-v1_default:
+      short: hcl_hcl-v1_default
+      buildType: MinSizeRel
+      settings:
+        CONFIG: hcl_hcl-v1_default
+    hcl_hcl-v1_release:
+      short: hcl_hcl-v1_release
+      buildType: Release
+      settings:
+        CONFIG: hcl_hcl-v1_default
     px4_io-v2_default:
       short: px4_io-v2
       buildType: MinSizeRel

@@ -41,7 +41,7 @@
  *  0 - JOINT CAN disabled.
  *  1 - Enables support for JOINT CAN sensors without dynamic node ID allocation and firmware update.
  *  2 - Enables support for JOINT CAN sensors with dynamic node ID allocation and firmware update.
- *  3 - Enables support for JOINT CAN sensors and actuators with dynamic node ID allocation and firmware update. Also sets the motor control outputs to UAVCAN.
+ *  3 - Enables support for JOINT CAN sensors and actuators with dynamic node ID allocation and firmware update. Also sets the motor control outputs to JOICAN.
  *
  * @min 0
  * @max 3
@@ -64,3 +64,211 @@ PARAM_DEFINE_INT32(JOICAN_ENABLE, 0);
  * @group JOINT_CAN
  */
 PARAM_DEFINE_INT32(JOICAN_BITRATE, 1000000);
+
+/**
+ * JOINT CAN 1 servo 1 zero offset
+ *
+ * @unit rad
+ * @min -2.0000
+ * @max 2.0000
+ * @decimal 10
+ * @increment 0.0001
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_FLOAT(JOICAN_C1S1_OFF, 0.0);
+
+/**
+ * JOINT CAN 1 servo 2 zero offset
+ *
+ * @unit rad
+ * @min -2.0000
+ * @max 2.0000
+ * @decimal 10
+ * @increment 0.0001
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_FLOAT(JOICAN_C1S2_OFF, 0.0);
+
+/**
+ * JOINT CAN 1 servo 3 zero offset
+ *
+ * @unit rad
+ * @min -2.0000
+ * @max 2.0000
+ * @decimal 10
+ * @increment 0.0001
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_FLOAT(JOICAN_C1S3_OFF, 0.0);
+
+/**
+ * JOINT CAN 1 servo 4 zero offset
+ *
+ * @unit rad
+ * @min -2.0000
+ * @max 2.0000
+ * @decimal 10
+ * @increment 0.0001
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_FLOAT(JOICAN_C1S4_OFF, 0.0);
+
+/**
+ * JOINT CAN 2 servo 1 zero offset
+ *
+ * @unit rad
+ * @min -2.0000
+ * @max 2.0000
+ * @decimal 10
+ * @increment 0.0001
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_FLOAT(JOICAN_C2S1_OFF, 0.0);
+
+/**
+ * JOINT CAN 2 servo 2 zero offset
+ *
+ * @unit rad
+ * @min -2.0000
+ * @max 2.0000
+ * @decimal 10
+ * @increment 0.0001
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_FLOAT(JOICAN_C2S2_OFF, 0.0);
+
+/**
+ * JOINT CAN 2 servo 3 zero offset
+ *
+ * @unit rad
+ * @min -2.0000
+ * @max 2.0000
+ * @decimal 10
+ * @increment 0.0001
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_FLOAT(JOICAN_C2S3_OFF, 0.0);
+
+/**
+ * JOINT CAN 2 servo 4 zero offset
+ *
+ * @unit rad
+ * @min -2.0000
+ * @max 2.0000
+ * @decimal 10
+ * @increment 0.0001
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_FLOAT(JOICAN_C2S4_OFF, 0.0);
+
+/**
+ * JOINT CAN 1 servo 1 reverse setpoint
+ *
+ *  0 - Not Reverse.
+ *  1 - Reverse.
+ *
+ * @min 0
+ * @max 1
+ * @value 0 Not Reverse
+ * @value 1 Reverse
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_INT32(JOICAN_C1S1_REV, 0);
+
+/**
+ * JOINT CAN 1 servo 2 reverse setpoint
+ *
+ *  0 - Not Reverse.
+ *  1 - Reverse.
+ *
+ * @min 0
+ * @max 1
+ * @value 0 Not Reverse
+ * @value 1 Reverse
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_INT32(JOICAN_C1S2_REV, 0);
+
+/**
+ * JOINT CAN 1 servo 3 reverse setpoint
+ *
+ *  0 - Not Reverse.
+ *  1 - Reverse.
+ *
+ * @min 0
+ * @max 1
+ * @value 0 Not Reverse
+ * @value 1 Reverse
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_INT32(JOICAN_C1S3_REV, 0);
+
+/**
+ * JOINT CAN 1 servo 4 reverse setpoint
+ *
+ *  0 - Not Reverse.
+ *  1 - Reverse.
+ *
+ * @min 0
+ * @max 1
+ * @value 0 Not Reverse
+ * @value 1 Reverse
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_INT32(JOICAN_C1S4_REV, 0);
+
+/**
+ * JOINT CAN 2 servo 1 reverse setpoint
+ *
+ *  0 - Not Reverse.
+ *  1 - Reverse.
+ *
+ * @min 0
+ * @max 1
+ * @value 0 Not Reverse
+ * @value 1 Reverse
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_INT32(JOICAN_C2S1_REV, 0);
+
+/**
+ * JOINT CAN 2 servo 2 reverse setpoint
+ *
+ *  0 - Not Reverse.
+ *  1 - Reverse.
+ *
+ * @min 0
+ * @max 1
+ * @value 0 Not Reverse
+ * @value 1 Reverse
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_INT32(JOICAN_C2S2_REV, 0);
+
+/**
+ * JOINT CAN 2 servo 3 reverse setpoint
+ *
+ *  0 - Not Reverse.
+ *  1 - Reverse.
+ *
+ * @min 0
+ * @max 1
+ * @value 0 Not Reverse
+ * @value 1 Reverse
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_INT32(JOICAN_C2S3_REV, 0);
+
+/**
+ * JOINT CAN 2 servo 4 reverse setpoint
+ *
+ *  0 - Not Reverse.
+ *  1 - Reverse.
+ *
+ * @min 0
+ * @max 1
+ * @value 0 Not Reverse
+ * @value 1 Reverse
+ * @group JOINT_CAN
+ */
+PARAM_DEFINE_INT32(JOICAN_C2S4_REV, 0);

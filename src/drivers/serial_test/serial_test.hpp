@@ -15,6 +15,7 @@
 #include <px4_platform_common/time.h>
 #include <px4_platform_common/Serial.hpp>
 #include <px4_platform_common/px4_config.h>
+#include <px4_platform_common/module_params.h>
 #include <px4_platform_common/px4_work_queue/ScheduledWorkItem.hpp>
 #include <cstdint>
 
@@ -52,7 +53,7 @@ private:
 	bool _receiver_start{false};
 };
 
-class SerialTest : public ModuleBase<SerialTest>
+class SerialTest : public ModuleBase<SerialTest>, public ModuleParams
 {
 public:
 	static constexpr uint64_t VEHICLE_STATUS_SEND_INVERVAL_us = 2e5;
@@ -92,4 +93,7 @@ private:
 
 	perf_counter_t	_sample_perf;
 
+	DEFINE_PARAMETERS(
+		(ParamInt<px4::params::SER_TET_INV>) _param_serial_invert
+	)
 };

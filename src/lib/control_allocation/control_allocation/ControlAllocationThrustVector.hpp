@@ -5,7 +5,7 @@
 class ControlAllocationThrustVector: public ControlAllocation
 {
 public:
-	static constexpr float FzFactor = 5;
+	static constexpr float FzFactor = 1;
 	ControlAllocationThrustVector() = default;
 	virtual ~ControlAllocationThrustVector() = default;
 
@@ -29,6 +29,7 @@ protected:
 private:
 	QuadProg<float, 12, 6, 8> _qp;
 	matrix::Vector<float, NUM_ACTUATORS> _safe_actuator_sp;  	///< Actuator setpoint
+	matrix::Matrix<float,3,3> _motor_R[4];
 	bool _last_qp_success{true};
 	bool _qp_need_reinitialise{false};
 };

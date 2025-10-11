@@ -436,7 +436,7 @@ void MulticopterPositionControl::Run()
 
 		_trajectory_setpoint_sub.update(&_setpoint);
 		_roll_pitch_setpoint_sub.update(&_roll_pitch_sp);
-		_vehicle_attitude_sub.update(&_vehicle_att);
+		//_vehicle_attitude_sub.update(&_vehicle_att);
 
 		adjustSetpointForEKFResets(vehicle_local_position, _setpoint);
 
@@ -550,7 +550,7 @@ void MulticopterPositionControl::Run()
 				_control.setPitchSetpoint(_pitch_setpoint_filter.getState());
 
 			} else {
-				_pitch_setpoint_filter.reset(Eulerf(Quaternionf(_vehicle_att.q)).theta());
+				_pitch_setpoint_filter.reset(0.0);
 				_control.setPitchSetpoint(NAN);
 			}
 
@@ -559,12 +559,11 @@ void MulticopterPositionControl::Run()
 				_control.setRollSetpoint(_roll_setpoint_filter.getState());
 
 			} else {
-				_roll_setpoint_filter.reset(Eulerf(Quaternionf(_vehicle_att.q)).phi());
+				_roll_setpoint_filter.reset(0.0);
 				_control.setRollSetpoint(NAN);
 			}
 
 			_control.setInputSetpoint(_setpoint);
-			_control.setAttitude(_vehicle_att.q);
 
 			// update states
 			if (!PX4_ISFINITE(_setpoint.position[2])

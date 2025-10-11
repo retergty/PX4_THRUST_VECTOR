@@ -140,13 +140,6 @@ public:
 	void setState(const PositionControlStates &states);
 
 	/**
-	 * Pass the current vehicle attitude to the controller
-	 * Note: NAN value means leave pitch uncontrolled
-	 * @param pitch_sp pitch setpoint
-	 */
-	void setAttitude(const float q[4]);
-
-	/**
 	 * Pass the desired setpoints
 	 * Note: NAN value means no feed forward/leave state uncontrolled if there's no higher order setpoint.
 	 * @param setpoint setpoints including feed-forwards to execute in update()
@@ -246,7 +239,6 @@ private:
 	matrix::Vector3f _vel_dot; /**< velocity derivative (replacement for acceleration estimate) */
 	matrix::Vector3f _vel_int; /**< integral term of the velocity controller */
 	float _yaw{}; /**< current heading */
-	float _q[4] {1, 0, 0, 0}; /*current attitude*/
 
 	// Setpoints
 	matrix::Vector3f _pos_sp; /**< desired position */

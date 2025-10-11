@@ -67,7 +67,9 @@ static char test_buf[50];
 using namespace time_literals;
 
 SerialTest::SerialTest(const char* port, const int baudrate)
-  : _serial_receiver(*this), _sample_perf(perf_alloc(PC_ELAPSED, MODULE_NAME ": read"))
+  : ModuleParams(nullptr),
+  _serial_receiver(*this), _sample_perf(perf_alloc(PC_ELAPSED, MODULE_NAME ": read"))
+
 {
   /* store port name */
   strncpy(_port, port, sizeof(_port) - 1);
@@ -133,7 +135,7 @@ void SerialTest::print_info()
 
   PX4_INFO("Serial information:\n");
   PX4_INFO("configured serial port: %s", _port);
-
+  PX4_INFO("swap tx/rx: %ld",_param_serial_invert.get());
   if (_uart_open)
   {
     PX4_INFO("opening\n");
@@ -307,6 +309,11 @@ int SerialTest::open_uart(const int baud, const char* uart_name)
   if (_uart_fd < 0)
   {
     return _uart_fd;
+  }
+
+  if(_param_serial_invert.get())
+  {
+	ioctl(_uart_fd, TIOCSSWAP, SER_SWAP_ENABLED);
   }
 
   /* Try to set baud rate */

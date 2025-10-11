@@ -1,5 +1,6 @@
 #include "joican.hpp"
 #include <px4_platform_common/log.h>
+
 using namespace joican;
 
 extern "C" __EXPORT int joican_main(int argc, char *argv[])
@@ -50,11 +51,6 @@ int Joican::init()
 	if (Joican_enable > 0) {
 		PX4_INFO("joican enable");
 	}
-
-	// enable servo
-	ServoEnable();
-	// send zero position
-	sendServoSetpoint();
 
 	return 0;
 }
@@ -223,14 +219,37 @@ int Joican::print_status()
   PX4_INFO("number of frames got: %d", _get_count);
   for (int i = 0; i < 4; ++i)
   {
-    PX4_INFO("can1 servo position: %f", (double)_can1_servo[i].position);
-    PX4_INFO("can2 servo position: %f", (double)_can2_servo[i].position);
+    PX4_INFO("can1 servo position: %f, timestamp: %lld", (double)_can1_servo[i].position,_can1_servo[i].timestamp);
+    PX4_INFO("can2 servo position: %f, timestamp: %lld", (double)_can2_servo[i].position,_can2_servo[i].timestamp);
   }
   return 0;
 }
-void Joican::updateParams()
+// void Joican::updateParams()
+// {
+//   OutputModuleInterface::updateParams();
+// }
+void Joican::parameters_updated()
 {
-  OutputModuleInterface::updateParams();
+	_can1_servo[0].zero_offset = _param_joican_c1s1_offset.get();
+	_can1_servo[1].zero_offset = _param_joican_c1s2_offset.get();
+	_can1_servo[2].zero_offset = _param_joican_c1s3_offset.get();
+	_can1_servo[3].zero_offset = _param_joican_c1s4_offset.get();
+
+	_can2_servo[0].zero_offset = _param_joican_c2s1_offset.get();
+	_can2_servo[1].zero_offset = _param_joican_c2s2_offset.get();
+	_can2_servo[2].zero_offset = _param_joican_c2s3_offset.get();
+	_can2_servo[3].zero_offset = _param_joican_c2s4_offset.get();
+
+	_can1_servo[0].reverse = _param_joican_c1s1_rev.get();
+	_can1_servo[1].reverse = _param_joican_c1s2_rev.get();
+	_can1_servo[2].reverse = _param_joican_c1s3_rev.get();
+	_can1_servo[3].reverse = _param_joican_c1s4_rev.get();
+
+	_can2_servo[0].reverse = _param_joican_c2s1_rev.get();
+	_can2_servo[1].reverse = _param_joican_c2s2_rev.get();
+	_can2_servo[2].reverse = _param_joican_c2s3_rev.get();
+	_can2_servo[3].reverse = _param_joican_c2s4_rev.get();
+
 }
 void Joican::setCountCorRet(const int16_t ret, int& sucess_count, int& fail_count)
 {
@@ -241,26 +260,57 @@ void Joican::setCountCorRet(const int16_t ret, int& sucess_count, int& fail_coun
 }
 void Joican::sendServoSetpoint()
 {
-  //_can1_last_ret[0] = _can1.send(_can1_servo_posctl[0]);
-  //_can2_last_ret[0] = _can2.send(_can2_servo_posctl[0]);
+  if(_can1_servo[0].enable)
+  {
+    _can1_last_ret[0] = _can1.send(_can1_servo_posctl[0]);
+  }
+//   if(_can2_servo[0].enable)
+//   {
+//     _can2_last_ret[0] = _can2.send(_can2_servo_posctl[0]);
+//   }
 
   if(_can1_servo[1].enable)
   {
-  	_can1_last_ret[1] = _can1.send(_can1_servo_posctl[1]);
+    _can1_last_ret[1] = _can1.send(_can1_servo_posctl[1]);
   }
-  //_can2_last_ret[1] = _can2.send(_can2_servo_posctl[1]);
+//   if(_can2_servo[1].enable)
+//   {
+//     _can2_last_ret[1] = _can2.send(_can2_servo_posctl[1]);
+//   }
 
-  //_can1_last_ret[2] = _can1.send(_can1_servo_posctl[2]);
-  //_can2_last_ret[2] = _can2.send(_can2_servo_posctl[2]);
 
-  //_can1_last_ret[3] = _can1.send(_can1_servo_posctl[3]);
-  //   _can2_last_ret[3] = _can2.send(_can2_servo_posctl[3]);
+  if(_can1_servo[2].enable)
+  {
+    _can1_last_ret[2] = _can1.send(_can1_servo_posctl[2]);
+  }
+//   if(_can2_servo[2].enable)
+//   {
+//     _can2_last_ret[2] = _can2.send(_can2_servo_posctl[2]);
+//   }
+
+  if(_can1_servo[3].enable)
+  {
+    _can1_last_ret[3] = _can1.send(_can1_servo_posctl[3]);
+  }
+//   if(_can2_servo[3].enable)
+//   {
+//     _can2_last_ret[3] = _can2.send(_can2_servo_posctl[3]);
+//   }
 
   //_can1_last_ret[0] = _can1.send(_can1_servo_posctl, 4);
+  bool all_can2_servo_enable = 1;
+  for(int i = 0; i < 4;++i)
+  {
+	all_can2_servo_enable &= _can2_servo[i].enable;
+  }
+  if(all_can2_servo_enable)
+  {
+	_can2_last_ret[0] = _can2.send(_can2_servo_posctl, 4);
+  }
   for (int i = 0; i < 4; ++i)
   {
-    setCountCorRet(_can1_last_ret[1], _can1_sucess_count, _can1_fail_count);
-    // setCountCorRet(_can1_last_ret[1], _can2_sucess_count, _can2_fail_count);
+    setCountCorRet(_can1_last_ret[i], _can1_sucess_count, _can1_fail_count);
+    setCountCorRet(_can1_last_ret[i], _can2_sucess_count, _can2_fail_count);
   }
 }
 void Joican::Run()
@@ -294,8 +344,10 @@ void Joican::Run()
 
     // update parameters from storage
     updateParams();
+    parameters_updated();
   }
-
+  _now_time = hrt_absolute_time();
+  ServoEnable();
   // check at end of cycle (updateSubscriptions() can potentially change to a different WorkQueue thread)
   _mixing_output.updateSubscriptions(true);
 
@@ -329,36 +381,78 @@ bool Joican::updateOutputs(bool stop_motors, uint16_t outputs[MAX_ACTUATORS], un
       // do not run any signal on disabled channels
       outputs[i + 4] = 0;
     }
-    _can1_servo_posctl[i].setAbsPosition((float)outputs[i] / 500.f - 1.f + _can1_servo[i].zero_offset);	     // [-1, 1]
-    _can2_servo_posctl[i].setAbsPosition((float)outputs[i + 4] / 500.f - 1.f + _can2_servo[i].zero_offset);  // [-1, 1]
+    float can_1_normalize_output = (float)outputs[i] / 5000.f - 1.f;
+    float can_2_normalize_output = (float)outputs[i + 4] / 5000.f - 1.f;
+    if(_can1_servo[i].reverse)
+    {
+	    can_1_normalize_output = -can_1_normalize_output;
+    }
+
+    if(_can2_servo[i].reverse)
+    {
+	    can_2_normalize_output = -can_2_normalize_output;
+    }
+    _can1_servo_posctl[i].setAbsPosition(can_1_normalize_output + _can1_servo[i].zero_offset);	     // [-1, 1]
+    _can2_servo_posctl[i].setAbsPosition(can_2_normalize_output + _can2_servo[i].zero_offset);  // [-1, 1]
   }
 
-  //   if ((_count % 800) == 0)
-  //   {
-  //        sendServoSetpoint();
-  //   }
+//     if ((_count % 800) == 0)
+//     {
+//          sendServoSetpoint();
+//     }
   sendServoSetpoint();
 
   return true;
 }
 void Joican::ServoEnable()
 {
-  //ServoEnableFrame servo1{ 0x1 };
+  ServoEnableFrame servo1{ 0x1 };
   ServoEnableFrame servo2{ 0x2 };
-  //ServoEnableFrame servo3{ 0x3 };
-  //ServoEnableFrame servo4{ 0x4 };
+  ServoEnableFrame servo3{ 0x3 };
+  ServoEnableFrame servo4{ 0x4 };
 
-  //_can1.send(servo1);
-  //_can2.send(servo1);
+//   if(!_can1_servo[0].enable)
+//   {
+// 	_can1.send(servo1);
+//   }
 
-  _can1.send(servo2);
-  //_can2.send(servo2);
+  if(!_can2_servo[0].enable)
+  {
+	_can2.send(servo1);
+  }
 
-  //_can1.send(servo3);
-  //_can2.send(servo3);
+//   if(!_can1_servo[1].enable)
+//   {
+// 	_can1.send(servo2);
+//   }
 
-  //_can1.send(servo4);
-  //_can2.send(servo4);
+  if(!_can2_servo[1].enable)
+  {
+	_can2.send(servo2);
+  }
+
+
+//   if(!_can1_servo[2].enable)
+//   {
+// 	_can1.send(servo3);
+//   }
+
+    if(!_can2_servo[2].enable)
+  {
+	_can2.send(servo3);
+  }
+
+
+//   if(!_can1_servo[3].enable)
+//   {
+// 	_can1.send(servo4);
+//   }
+
+  if(!_can2_servo[3].enable)
+  {
+	_can2.send(servo4);
+  }
+
 }
 void Joican::ServoDisable()
 {
@@ -383,6 +477,11 @@ void Joican::handReceiveFrame(const can_frame& frame, const uint8_t can_instance
 {
   ServoState* servo = nullptr;
   uint8_t dev_id = frame.data[0];
+  if(dev_id > 5)
+  {
+  	return;
+  }
+
   if (can_instance == 1)
   {
     servo = &_can1_servo[dev_id-1];
@@ -396,15 +495,20 @@ void Joican::handReceiveFrame(const can_frame& frame, const uint8_t can_instance
     return;
   }
 
-  if (!servo->enable)
-  {
-    servo->enable = true;
-  }
-
+  // bug report: servo will not resend can frame even when it lost arbitration,
+  // which leads to first two servos don't get position feedback.
+  // possible solution: rearrange sent frames sequence making every frame will get position feedback
+  servo->timestamp = _now_time;
   uint16_t p_raw = (frame.data[1] << 8) | frame.data[2];
   //uint16_t v_raw = (frame.data[3] << 4) | (frame.data[4] >> 4);
   //uint16_t t_raw = ((frame.data[4] & 0xF) << 8) | frame.data[5];
 
   // only convert position because we only need position
   servo->position = AbsPostionCtlFrame::positionDecoder(p_raw);
+
+  if (!servo->enable)
+  {
+    servo->enable = true;
+    //servo->absolute_offset = servo->position;
+  }
 }

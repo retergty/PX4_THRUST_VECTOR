@@ -184,15 +184,6 @@ MulticopterAttitudeControl::generate_attitude_setpoint(const Quatf &q, float dt,
 	//   yaw = atan(-2 * sin(b) * cos(b) * sin^2(a/2) / (1 - 2 * cos^2(b) * sin^2(a/2))).
 	const Quatf q_sp_yaw(cosf(_man_yaw_sp / 2.f), 0.f, 0.f, sinf(_man_yaw_sp / 2.f));
 
-	if (_vtol) {
-		// Modify the setpoints for roll and pitch such that they reflect the user's intention even
-		// if a large yaw error(yaw_sp - yaw) is present. In the presence of a yaw error constructing
-		// an attitude setpoint from the yaw setpoint will lead to unexpected attitude behaviour from
-		// the user's view as the tilt will not be aligned with the heading of the vehicle.
-
-		AttitudeControlMath::correctTiltSetpointForYawError(q_sp_rp, q, q_sp_yaw);
-	}
-
 	// Align the desired tilt with the yaw setpoint
 	Quatf q_sp = q_sp_yaw * q_sp_rp;
 
@@ -272,13 +263,7 @@ MulticopterAttitudeControl::Run()
 
 		bool attitude_setpoint_generated = false;
 
-		const bool is_hovering = (_vehicle_type_rotary_wing && !_vtol_in_transition_mode);
-
-		// vehicle is a tailsitter in transition mode
-		const bool is_tailsitter_transition = (_vtol_tailsitter && _vtol_in_transition_mode);
-
-		const bool run_att_ctrl = _vehicle_control_mode.flag_control_attitude_enabled && (is_hovering
-					  || is_tailsitter_transition);
+		const bool run_att_ctrl = _vehicle_control_mode.flag_control_attitude_enabled;
 
 		if (run_att_ctrl) {
 

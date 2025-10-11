@@ -36,12 +36,8 @@ px4_add_library(ControlAllocation
 	ControlAllocation.hpp
 	ControlAllocationThrustVector.cpp
 	ControlAllocationThrustVector.hpp
-	ControlAllocationPseudoInverse.cpp
-	ControlAllocationPseudoInverse.hpp
-	ControlAllocationSequentialDesaturation.cpp
-	ControlAllocationSequentialDesaturation.hpp
 )
-target_compile_options(ControlAllocation PRIVATE ${MAX_CUSTOM_OPT_LEVEL})
+target_compile_options(ControlAllocation PRIVATE -O3)
 target_include_directories(ControlAllocation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ControlAllocation PRIVATE mathlib)
 

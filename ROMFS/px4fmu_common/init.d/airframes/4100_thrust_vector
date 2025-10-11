@@ -9,7 +9,7 @@
 #
 . ${R}etc/init.d/rc.mc_defaults
 
-param set-default CA_AIRFRAME 1
+param set-default CA_AIRFRAME 0
 param set-default CA_ROTOR_COUNT 4
 
 param set-default CA_ROTOR0_PX 0.1315
@@ -49,3 +49,23 @@ param set JOICAN_SV_FUNC5 205
 param set JOICAN_SV_FUNC6 206
 param set JOICAN_SV_FUNC7 207
 param set JOICAN_SV_FUNC8 208
+
+param set-default JOICAN_C1S1_OFF 0
+param set-default JOICAN_C1S2_OFF 0
+param set-default JOICAN_C1S3_OFF 0
+param set-default JOICAN_C1S4_OFF 0
+
+param set-default JOICAN_C2S1_OFF 0
+param set-default JOICAN_C2S2_OFF 0
+param set-default JOICAN_C2S3_OFF 0
+param set-default JOICAN_C2S4_OFF 0
+
+param set-default JOICAN_C1S1_REV 0
+param set-default JOICAN_C1S2_REV 0
+param set-default JOICAN_C1S3_REV 0
+param set-default JOICAN_C1S4_REV 0
+
+param set-default JOICAN_C2S1_REV 0
+param set-default JOICAN_C2S2_REV 0
+param set-default JOICAN_C2S3_REV 0
+param set-default JOICAN_C2S4_REV 0

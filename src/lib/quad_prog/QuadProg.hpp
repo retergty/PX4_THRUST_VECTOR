@@ -353,12 +353,33 @@ public:
 
 		State_ = QuadProgState::UnconstrainMin;
 	}
+	void UpdateInequalConstrains(const Matrix<Scalar,DIMISIONS,IEQST>& CI,const Vector<Scalar,IEQST>& ci0)
+	{
+		CI_ = CI;
+		ci0_ = ci0;
+		State_ = QuadProgState::UnconstrainMin;
+	}
 	void UpdateVectorConstrains(const Vector<Scalar, EQST> &ce0, const Vector<Scalar, IEQST> &ci0)
 	{
 		ce0_ = ce0;
 		ci0_ = ci0;
 
 		State_ = QuadProgState::UnconstrainMin;
+	}
+	Matrix<Scalar,DIMISIONS,IEQST>& GetCIRef()
+	{
+		State_ = QuadProgState::UnconstrainMin;
+		return CI_;
+	}
+	Vector<Scalar,EQST>& GetCe0Ref()
+	{
+		State_ = QuadProgState::UnconstrainMin;
+		return ce0_;
+	}
+	Vector<Scalar,IEQST>& GetCI0Ref()
+	{
+		State_ = QuadProgState::UnconstrainMin;
+		return ci0_;
 	}
 	Vector<Scalar, DIMISIONS> GetOptimalVector() const
 	{

@@ -841,6 +841,7 @@ static void fdcan_reset(struct fdcan_driver_s *priv)
 
 	leave_critical_section(flags);
 }
+#if JOICAN_DEBUG==1
 static void CanRegisterDump(const struct fdcan_driver_s *const priv)
 {
 	PX4_INFO("stm32h7 fdcan base address:%08x", (int)priv->base);
@@ -919,10 +920,11 @@ static void CanRegisterDump(const struct fdcan_driver_s *const priv)
 	int RXF0S = getreg32(priv->base + STM32_FDCAN_RXF0S_OFFSET);
 	PX4_INFO("RXF0S register: %08x", RXF0S);
 }
+#endif
 int CanDriver::print_status()
 {
-	CanRegisterDump(_priv);
 #if JOICAN_DEBUG==1
+	CanRegisterDump(_priv);
 	PX4_INFO("received frame in candriver %d", _priv->_re_count);
 	PX4_INFO("received frame lost count %d", _priv->_re_lost);
 	PX4_INFO("received frame error count %d", _priv->_re_error);

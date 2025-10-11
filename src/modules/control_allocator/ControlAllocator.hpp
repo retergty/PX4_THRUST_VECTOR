@@ -140,8 +140,7 @@ private:
 
 	enum class EffectivenessSource {
 		NONE = -1,
-		MULTIROTOR = 0,
-		Multirotor_Thrust_Vector = 1,
+		Multirotor_Thrust_Vector = 0,
 	};
 
 	enum class FailureMode {
