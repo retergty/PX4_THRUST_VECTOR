@@ -11,7 +11,7 @@
 struct AbsPostionCtlFrame : public joican::can_frame {
 	static constexpr uint8_t DataLength = 0x08;
 	static constexpr float Kp = 30.f;
-	static constexpr float Kd = 1.f;
+	static constexpr float Kd = 1.5f;
 
 	static constexpr float PositionOffsetFactor = 12.5f;
 	static constexpr float PositionMultiplyFactor = 65535.f / 25.f;
@@ -167,7 +167,14 @@ private:
 
 	void ServoDisable();
 
-	//void updateParams() override;
+	bool allServoEnable(const ServoState *servo_state, const int servo_num)
+	{
+		for (int i = 0; i < servo_num; ++i)
+		{
+			if(!servo_state[i].enable) return false;
+		}
+		return true;
+	}
 
 	void parameters_updated();
 
