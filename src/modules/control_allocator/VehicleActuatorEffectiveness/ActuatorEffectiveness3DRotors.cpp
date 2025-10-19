@@ -69,7 +69,6 @@ ActuatorEffectiveness3DRotors::ActuatorEffectiveness3DRotors(ModuleParams *paren
 
 		snprintf(buffer, sizeof(buffer), "CA_ROTOR%u_KM", i);
 		_param_handles[i].moment_ratio = param_find(buffer);
-
 	}
 
 	_motor_q[0] = AxisAnglef(Vector3f(0, 0, 1), -M_PI / 4);
@@ -84,8 +83,8 @@ ActuatorEffectiveness3DRotors::ActuatorEffectiveness3DRotors(ModuleParams *paren
 	updateParams();
 }
 
-matrix::Vector<float, 12> ActuatorEffectiveness3DRotors::computeActuatorSetpoint(const matrix::Vector<float, 12>
-		&force_vector)
+matrix::Vector<float, 12>
+ActuatorEffectiveness3DRotors::computeActuatorSetpoint(const matrix::Vector<float, 12> &force_vector)
 {
 	matrix::Vector<float, 12> actuator_setpoint;
 
@@ -98,9 +97,10 @@ matrix::Vector<float, 12> ActuatorEffectiveness3DRotors::computeActuatorSetpoint
 	}
 
 	for (size_t i = 0; i < 4; ++i) {
-		_servo_angle[i](0) = atanf(-motor_thr_sp[i](1) / motor_thr_sp[i](2));
-		_servo_angle[i](1) = atanf(motor_thr_sp[i](0) /
-					   (motor_thr_sp[i](2) * cosf(_servo_angle[i](0)) - motor_thr_sp[i](1) * sinf(_servo_angle[i](0))));
+		//_servo_angle[i](0) = atanf(-motor_thr_sp[i](1) / motor_thr_sp[i](2));
+		_servo_angle[i](0) = atan2f(motor_thr_sp[i](1), -motor_thr_sp[i](2));
+		_servo_angle[i](1) = atanf(motor_thr_sp[i](0) / (motor_thr_sp[i](2) * cosf(_servo_angle[i](0)) -
+					   motor_thr_sp[i](1) * sinf(_servo_angle[i](0))));
 		_rotor_speed[i] = motor_thr_sp[i].length() / _geometry.rotors[i].thrust_coef;
 	}
 
@@ -108,6 +108,10 @@ matrix::Vector<float, 12> ActuatorEffectiveness3DRotors::computeActuatorSetpoint
 		actuator_setpoint(i) = _rotor_speed[i];
 		actuator_setpoint(i + 4) = _servo_angle[i](0) / M_PI_F * 2;
 		actuator_setpoint(i + 8) = -_servo_angle[i](1) / M_PI_F * 2;
+		if (actuator_setpoint(i + 8) <= -0.03f) {
+			//PX4_INFO("angle limit! %f", (double)(-_servo_angle[i](1)));
+			actuator_setpoint(i + 8) = -0.03f;
+		}
 	}
 
 	return actuator_setpoint;
@@ -150,26 +154,25 @@ void ActuatorEffectiveness3DRotors::updateParams()
 	}
 }
 
-bool
-ActuatorEffectiveness3DRotors::addActuators(Configuration &configuration)
+bool ActuatorEffectiveness3DRotors::addActuators(Configuration &configuration)
 {
 	if (configuration.num_actuators[(int)ActuatorType::SERVOS] > 0) {
 		PX4_ERR("Wrong actuator ordering: servos need to be after motors");
 		return false;
 	}
 
-	int num_actuators = computeEffectivenessMatrix(_geometry,
-			    configuration.effectiveness_matrices[configuration.selected_matrix],
-			    configuration.num_actuators_matrix[configuration.selected_matrix]);
+	int num_actuators =
+		computeEffectivenessMatrix(_geometry, configuration.effectiveness_matrices[configuration.selected_matrix],
+					   configuration.num_actuators_matrix[configuration.selected_matrix]);
 	configuration.actuatorsAdded(ActuatorType::MOTORS, num_actuators);
 	configuration.actuatorsAdded(ActuatorType::SERVOS, num_actuators);
 	configuration.actuatorsAdded(ActuatorType::SERVOS, num_actuators);
 	return true;
 }
 
-int
-ActuatorEffectiveness3DRotors::computeEffectivenessMatrix(const Geometry &geometry,
-		EffectivenessMatrix &effectiveness, int actuator_start_index)
+int ActuatorEffectiveness3DRotors::computeEffectivenessMatrix(const Geometry &geometry,
+		EffectivenessMatrix &effectiveness,
+		int actuator_start_index)
 {
 	int num_actuators = 0;
 
@@ -185,7 +188,7 @@ ActuatorEffectiveness3DRotors::computeEffectivenessMatrix(const Geometry &geomet
 
 		// Get coefficients
 		float km = geometry.rotors[i].moment_ratio;
-		(void)km;
+		//(void)km;
 
 		Dcmf motor_R = _motor_q[i];
 
@@ -204,8 +207,7 @@ ActuatorEffectiveness3DRotors::computeEffectivenessMatrix(const Geometry &geomet
 	return num_actuators;
 }
 
-bool
-ActuatorEffectiveness3DRotors::getEffectivenessMatrix(Configuration &configuration,
+bool ActuatorEffectiveness3DRotors::getEffectivenessMatrix(Configuration &configuration,
 		EffectivenessUpdateReason external_update)
 {
 	if (external_update == EffectivenessUpdateReason::NO_EXTERNAL_UPDATE) {

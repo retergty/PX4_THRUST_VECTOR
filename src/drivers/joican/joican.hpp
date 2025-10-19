@@ -10,7 +10,7 @@
 
 struct AbsPostionCtlFrame : public joican::can_frame {
 	static constexpr uint8_t DataLength = 0x08;
-	static constexpr float Kp = 30.f;
+	static constexpr float Kp = 40.f;
 	static constexpr float Kd = 1.5f;
 
 	static constexpr float PositionOffsetFactor = 12.5f;

@@ -85,9 +85,9 @@ ControlAllocationThrustVector::updateQPState()
 
 		CI.setZero();
 
-		for (int i = 0; i < 4; ++i) {
-			CI(3 * i + 2, i) = -1;
-		}
+		// for (int i = 0; i < 4; ++i) {
+		// 	CI(3 * i + 2, i) = -1;
+		// }
 
 		for (int i = 0; i < 4; ++i) {
 			CI(3 * i, i + 4) = 1;
@@ -95,12 +95,13 @@ ControlAllocationThrustVector::updateQPState()
 
 		ci0.setZero();
 		ci0(0) = ci0(1) = ci0(2) = ci0(3) = -0.02;
+		ci0(4) = ci0(5) = ci0(6) = ci0(7) = -0.01;
 
 		_qp.init(G, g0, CE, ce0, CI, ci0);
 		_qp_need_reinitialise = false;
 
-		_safe_actuator_sp.setZero();
-		_safe_actuator_sp(2) = _safe_actuator_sp(5) = _safe_actuator_sp(8) = _safe_actuator_sp(11) = -0.05;
+		_last_success_actuator_sp.setZero();
+		_last_success_actuator_sp(2) = _last_success_actuator_sp(5) = _last_success_actuator_sp(8) = _last_success_actuator_sp(11) = -0.05;
 
 		for (int i = 0; i < 4; ++i) {
 			_motor_R[i] = _effectiveness.slice<3, 3>(3, 3 * i);
@@ -118,12 +119,12 @@ ControlAllocationThrustVector::allocate()
 	_prev_actuator_sp = _actuator_sp;
 
 	//allocate
-	_control_sp(0) /= 2;
-	_control_sp(1) /= 2;
-	_control_sp(2) /= 2;
-	_control_sp(3) *= 30;
-	_control_sp(4) *= 30;
-	_control_sp(5) *= 30;
+	_control_sp(0) /= 1.5f;
+	_control_sp(1) /= 1.5f;
+	_control_sp(2) /= 1.5f;
+	_control_sp(3) *= 40;
+	_control_sp(4) *= 40;
+	_control_sp(5) *= 40;
 
 	matrix::Vector<float, 3> thrust_sp;
 	thrust_sp(0) = _control_sp(3);
@@ -137,15 +138,16 @@ ControlAllocationThrustVector::allocate()
 		CI.slice<3, 1>(3 * i, i) = cof;
 	}
 
-	matrix::Vector<float, 6>& Ce0 = _qp.GetCe0Ref();
+	matrix::Vector<float, 6> &Ce0 = _qp.GetCe0Ref();
 	Ce0 = -(_control_sp - _control_trim);
 
 	if (_qp.Solve()) {
 		_last_qp_success = true;
 		_actuator_sp = _qp.GetOptimalVector();
+		_last_success_actuator_sp = _actuator_sp;
 
 	} else {
 		_last_qp_success = false;
-		_actuator_sp = _safe_actuator_sp;
+		_actuator_sp = _last_success_actuator_sp;
 	}
 }
