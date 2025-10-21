@@ -94,7 +94,7 @@ ControlAllocationThrustVector::updateQPState()
 		}
 
 		ci0.setZero();
-		ci0(0) = ci0(1) = ci0(2) = ci0(3) = -0.02;
+		ci0(0) = ci0(1) = ci0(2) = ci0(3) = -0.2;
 		ci0(4) = ci0(5) = ci0(6) = ci0(7) = -0.01;
 
 		_qp.init(G, g0, CE, ce0, CI, ci0);

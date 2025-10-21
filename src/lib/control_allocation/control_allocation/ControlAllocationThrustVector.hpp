@@ -2,10 +2,22 @@
 
 #include "ControlAllocation.hpp"
 #include <quad_prog/QuadProg.hpp>
+
+// class QpManager
+// {
+// public:
+// 	void updateQpState(const Matrix<Scalar, DIMISIONS, DIMISIONS> &G, const Vector<Scalar, DIMISIONS> &g0,
+// 			   const Matrix<Scalar, DIMISIONS, EQST> &CE, const Vector<Scalar, EQST> &ce0,
+// 			   const Matrix<Scalar, DIMISIONS, IEQST> &CI, const Vector<Scalar, IEQST> &ci0);
+// private:
+// 	QuadProg<float, 12, 6, 8> _takeoff_qp;
+// 	QuadProg<float, 12, 6, 8> _optimal_qp;
+// };
+
 class ControlAllocationThrustVector: public ControlAllocation
 {
 public:
-	static constexpr float FzFactor = 1;
+	static constexpr float FzFactor = 1.f;
 	ControlAllocationThrustVector() = default;
 	virtual ~ControlAllocationThrustVector() = default;
 
@@ -30,7 +42,7 @@ private:
 	QuadProg<float, 12, 6, 8> _qp;
 	matrix::Vector<float, NUM_ACTUATORS> _safe_actuator_sp;  	///< Actuator setpoint
 	matrix::Vector<float, NUM_ACTUATORS> _last_success_actuator_sp;
-	matrix::Matrix<float,3,3> _motor_R[4];
+	matrix::Matrix<float, 3, 3> _motor_R[4];
 	bool _last_qp_success{true};
 	bool _qp_need_reinitialise{false};
 };

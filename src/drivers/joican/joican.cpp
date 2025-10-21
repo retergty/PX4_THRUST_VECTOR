@@ -418,41 +418,49 @@ void Joican::ServoEnable()
   if (!_can1_servo[0].enable)
   {
     _can1.send(servo1);
+    return;
   }
 
   if (!_can2_servo[0].enable)
   {
     _can2.send(servo1);
+    return;
   }
 
   if (!_can1_servo[1].enable)
   {
     _can1.send(servo2);
+    return;
   }
 
   if (!_can2_servo[1].enable)
   {
     _can2.send(servo2);
+    return;
   }
 
   if (!_can1_servo[2].enable)
   {
     _can1.send(servo3);
+    return;
   }
 
   if (!_can2_servo[2].enable)
   {
     _can2.send(servo3);
+    return;
   }
 
   if (!_can1_servo[3].enable)
   {
     _can1.send(servo4);
+    return;
   }
 
   if (!_can2_servo[3].enable)
   {
     _can2.send(servo4);
+    return;
   }
 }
 void Joican::ServoDisable()
