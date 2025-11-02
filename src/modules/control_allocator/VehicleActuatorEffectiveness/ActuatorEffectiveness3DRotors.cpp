@@ -41,6 +41,7 @@
 
 #include "ActuatorEffectiveness3DRotors.hpp"
 #include <lib/matrix/matrix/math.hpp>
+
 using namespace matrix;
 
 ActuatorEffectiveness3DRotors::ActuatorEffectiveness3DRotors(ModuleParams *parent, AxisConfiguration axis_config)
@@ -82,32 +83,43 @@ ActuatorEffectiveness3DRotors::ActuatorEffectiveness3DRotors(ModuleParams *paren
 
 	updateParams();
 }
+void ActuatorEffectiveness3DRotors::checkNumericStableAndSetMotorSetpoint(const matrix::Vector<float, 12> &force_vector,
+		std::array<Vector3f, 4> &motor_thr_sp)
+{
+	for (size_t i = 0; i < 4; ++i) {
+		if (force_vector(i * 3) < 0.f) {
+			motor_thr_sp[i](0) = 0.f;
 
+		} else {
+			motor_thr_sp[i](0) = force_vector(i * 3);
+		}
+		motor_thr_sp[i](1) = force_vector(i * 3 + 1);
+		motor_thr_sp[i](2) = force_vector(i * 3 + 2);
+	}
+
+}
 matrix::Vector<float, 12>
 ActuatorEffectiveness3DRotors::computeActuatorSetpoint(const matrix::Vector<float, 12> &force_vector)
 {
 	matrix::Vector<float, 12> actuator_setpoint;
 
-	Vector3f motor_thr_sp[4];
+	std::array<Vector3f, 4> motor_thr_sp;
 
-	for (size_t i = 0; i < 4; ++i) {
-		motor_thr_sp[i](0) = force_vector(i * 3);
-		motor_thr_sp[i](1) = force_vector(i * 3 + 1);
-		motor_thr_sp[i](2) = force_vector(i * 3 + 2);
-	}
+	checkNumericStableAndSetMotorSetpoint(force_vector, motor_thr_sp);
 
 	for (size_t i = 0; i < 4; ++i) {
 		//_servo_angle[i](0) = atanf(-motor_thr_sp[i](1) / motor_thr_sp[i](2));
 		_servo_angle[i](0) = atan2f(motor_thr_sp[i](1), -motor_thr_sp[i](2));
 		_servo_angle[i](1) = atanf(motor_thr_sp[i](0) / (motor_thr_sp[i](2) * cosf(_servo_angle[i](0)) -
 					   motor_thr_sp[i](1) * sinf(_servo_angle[i](0))));
-		_rotor_speed[i] = motor_thr_sp[i].length() / _geometry.rotors[i].thrust_coef;
+		_rotor_speed[i] = motor_thr_sp[i].length();;
 	}
 
 	for (size_t i = 0; i < 4; ++i) {
 		actuator_setpoint(i) = _rotor_speed[i];
 		actuator_setpoint(i + 4) = _servo_angle[i](0) / M_PI_F * 2;
 		actuator_setpoint(i + 8) = -_servo_angle[i](1) / M_PI_F * 2;
+
 		if (actuator_setpoint(i + 8) <= -0.03f) {
 			//PX4_INFO("angle limit! %f", (double)(-_servo_angle[i](1)));
 			actuator_setpoint(i + 8) = -0.03f;
@@ -196,11 +208,11 @@ int ActuatorEffectiveness3DRotors::computeEffectivenessMatrix(const Geometry &ge
 
 		for (int j = 0; j < 3; ++j) {
 			const Vector3f axis = motor_R.col(j);
-			effectiveness.slice<3, 1>(0, 3 * i + j) = position.cross(axis) - km * axis;
+			effectiveness.slice<3, 1>(0, 3 * i + j) = position.cross(axis);//- km * axis;
 
-			// if (j == 2) {
-			// 	effectiveness.slice<3, 1>(0, 3 * i + j) += -km * axis;
-			// }
+			if (j == 2) {
+				effectiveness.slice<3, 1>(0, 3 * i + j) += -km * axis;
+			}
 		}
 	}
 

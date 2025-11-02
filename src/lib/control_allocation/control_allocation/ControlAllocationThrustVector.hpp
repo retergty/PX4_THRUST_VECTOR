@@ -17,7 +17,9 @@
 class ControlAllocationThrustVector: public ControlAllocation
 {
 public:
-	static constexpr float FzFactor = 1.f;
+	static constexpr float FzFactor = 1.0f;
+	static constexpr float QpLimits = 0.03f;
+	static constexpr float QpLimitsTol = 0.02f;
 	ControlAllocationThrustVector() = default;
 	virtual ~ControlAllocationThrustVector() = default;
 

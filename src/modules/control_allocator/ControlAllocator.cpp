@@ -214,13 +214,7 @@ ControlAllocator::Run()
 		}
 	}
 
-	{
-		vehicle_control_mode_s vehicle_control_mode;
-
-		if (_vehicle_control_mode_sub.update(&vehicle_control_mode)) {
-			_publish_controls = vehicle_control_mode.flag_control_allocation_enabled;
-		}
-	}
+	_publish_controls = true;
 
 	// Guard against too small (< 0.2ms) and too large (> 20ms) dt's.
 	const hrt_abstime now = hrt_absolute_time();

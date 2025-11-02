@@ -34,10 +34,10 @@ public:
 			// overwrite, discard data
 			if (wridx_ == reidx_) {
 				reidx_++;
-			}
 
-			if (reidx_ == Num) {
-				reidx_ = 0;
+				if (reidx_ == Num) {
+					reidx_ = 0;
+				}
 			}
 		}
 
