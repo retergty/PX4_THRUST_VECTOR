@@ -62,13 +62,21 @@ void ControlAllocationThrustVector::print_status()
 	PX4_INFO("QP iteration count %d", _qp.GetIterationCount());
 	PX4_INFO("QP optimal Vector");
 	_qp.GetOptimalVector().print();
+
+	// PX4_INFO("G factor (x,y,z): ");
+
+	// for (int i = 0; i < 4; ++i) {
+	// 	PX4_INFO_RAW("(%f, %f, %f), ", (double) _G(3 * i, 3 * i), (double)_G(3 * i + 1, 3 * i + 1),
+	// 		     (double) _G(3 * i + 2, 3 * i + 2));
+	// }
+
 }
 
 void
 ControlAllocationThrustVector::updateQPState()
 {
 	if (_qp_need_reinitialise) {
-		matrix::Matrix<float, 12, 12> G;
+		DiagnoalMatrix<float, 12> G;
 		matrix::Vector<float, 12> g0;
 		matrix::Matrix<float, 12, 6> CE = _effectiveness.transpose();
 		matrix::Vector<float, 6> ce0 = -(_control_sp - _control_trim);
@@ -78,7 +86,8 @@ ControlAllocationThrustVector::updateQPState()
 		G.setIdentity();
 
 		for (int i = 0; i < 4; ++i) {
-			G(3 * i + 2, 3 * i + 2) *= FzFactor;
+			G(3 * i, 3 * i) /= FzFactor;
+			G(3 * i + 1, 3 * i + 1) /= FzFactor;
 		}
 
 		g0.setZero();
@@ -120,13 +129,14 @@ ControlAllocationThrustVector::allocate()
 	_prev_actuator_sp = _actuator_sp;
 
 	//allocate
-	_control_sp(0) /= 1.0f;
-	_control_sp(1) /= 1.0f;
-	_control_sp(2) /= 1.0f;
-	_control_sp(3) *= 4.f;
-	_control_sp(4) *= 4.f;
-	_control_sp(5) *= 4.f;
+	_control_sp(0) *= 5.0f;
+	_control_sp(1) *= 5.0f;
+	_control_sp(2) *= 4.0f;
+	_control_sp(3) *= 50.f;
+	_control_sp(4) *= 50.f;
+	_control_sp(5) *= 50.f;
 
+	// update CI
 	matrix::Vector<float, 3> thrust_sp;
 	thrust_sp(0) = _control_sp(3);
 	thrust_sp(1) = _control_sp(4);
@@ -152,6 +162,7 @@ ControlAllocationThrustVector::allocate()
 		}
 
 	} else {
+		// normalize it
 		thrust_sp /= thrust_sp_length;
 		matrix::Matrix<float, 12, 8> &CI = _qp.GetCIRef();
 
@@ -161,6 +172,45 @@ ControlAllocationThrustVector::allocate()
 		}
 	}
 
+	// // update G
+	// for (int i = 0; i < 4; ++i) {
+	// 	matrix::Vector<float, 3> thrust_vector_abs = _motor_R[i].transpose() * thrust_sp;
+
+	// 	float max_thrust_factor = 0;
+	// 	int max_thrust_axis = 0;
+
+	// 	for (int j = 0; j < 3; ++j) {
+	// 		thrust_vector_abs(j) =  std::abs(thrust_vector_abs(j));
+
+	// 		if (thrust_vector_abs(j) < 0.1f) { thrust_vector_abs(j) = 0.1f; }
+
+	// 		if (thrust_vector_abs(j) > max_thrust_factor) {
+	// 			max_thrust_factor = thrust_vector_abs(j);
+	// 			max_thrust_axis = j;
+	// 		}
+	// 	}
+
+	// 	// _G(3 * i, 3 * i) = max_thrust_factor / thrust_vector_abs(0);
+	// 	// _G(3 * i + 1, 3 * i + 1) = max_thrust_factor / thrust_vector_abs(1);
+	// 	// _G(3 * i + 2, 3 * i + 2) = max_thrust_factor / thrust_vector_abs(2);
+
+	// 	// if (_G(3 * i, 3 * i) > 10) { _G(3 * i, 3 * i) = 10; }
+
+	// 	// if (_G(3 * i + 1, 3 * i + 1) > 10) { _G(3 * i + 1, 3 * i + 1) = 10; }
+
+	// 	// if (_G(3 * i + 2, 3 * i + 2) > 10) { _G(3 * i + 2, 3 * i + 2) = 10; }
+
+	// 	_G(3 * i, 3 * i) = 1;
+	// 	_G(3 * i + 1, 3 * i + 1) = 1;
+	// 	_G(3 * i + 2, 3 * i + 2) = 1;
+
+	// 	_G(3 * i + max_thrust_axis, 3 * i + max_thrust_axis) *= FzFactor;
+
+	// }
+
+	// _qp.updateScalarMatrix(_G);
+
+	//update ce0
 	matrix::Vector<float, 6> &Ce0 = _qp.GetCe0Ref();
 	Ce0 = -(_control_sp - _control_trim);
 

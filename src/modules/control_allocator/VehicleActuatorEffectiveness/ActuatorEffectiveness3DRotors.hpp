@@ -42,7 +42,7 @@
 #pragma once
 
 #include "ActuatorEffectiveness.hpp"
-#include <array>
+
 #include <px4_platform_common/module_params.h>
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionInterval.hpp>
@@ -110,7 +110,7 @@ private:
 	constexpr static float SERVO_ANGLE_MIN = -M_PI_F / 2.f;
 
 	void checkNumericStableAndSetMotorSetpoint(const matrix::Vector<float, 12> &force_vector,
-			std::array<matrix::Vector3f, 4> &motor_thr_sp);
+			matrix::Vector3f motor_thr_sp[4]);
 
 	void updateParams() override;
 	const AxisConfiguration _axis_config;

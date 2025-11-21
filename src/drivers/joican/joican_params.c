@@ -272,3 +272,18 @@ PARAM_DEFINE_INT32(JOICAN_C2S3_REV, 0);
  * @group JOINT_CAN
  */
 PARAM_DEFINE_INT32(JOICAN_C2S4_REV, 0);
+
+/**
+* Low pass filter cutoff frequency for JOINT CAN servo
+*
+* The cutoff frequency for the 2nd order butterworth filter on the servos.
+*
+* A value of 0 disables the filter.
+*
+* @min 0
+* @max 1000
+* @unit Hz
+* @reboot_required true
+* @group JOINT_CAN
+*/
+PARAM_DEFINE_FLOAT(JOICAN_SV_CUTOFF, 100.0f);

@@ -3,72 +3,65 @@
 
 using namespace joican;
 
-extern "C" __EXPORT int joican_main(int argc, char* argv[])
+extern "C" __EXPORT int joican_main(int argc, char *argv[])
 {
-  return Joican::main(argc, argv);
+	return Joican::main(argc, argv);
 }
-int Joican::task_spawn(int argc, char* argv[])
+int Joican::task_spawn(int argc, char *argv[])
 {
-  Joican* instance = new Joican();
+	Joican *instance = new Joican();
 
-  if (!instance)
-  {
-    PX4_ERR("alloc failed");
-    return -1;
-  }
+	if (!instance) {
+		PX4_ERR("alloc failed");
+		return -1;
+	}
 
-  _object.store(instance);
-  _task_id = task_id_is_work_queue;
-  instance->ScheduleNow();
-  return 0;
+	_object.store(instance);
+	_task_id = task_id_is_work_queue;
+	instance->ScheduleNow();
+	return 0;
 }
 
 int Joican::init()
 {
-  if (_can1.initCan(0) < 0)
-  {
-    PX4_ERR("can1 init fail");
-    return -1;
-  }
+	if (_can1.initCan(0) < 0) {
+		PX4_ERR("can1 init fail");
+		return -1;
+	}
 
-  if (_can2.initCan(1) < 0)
-  {
-    PX4_ERR("can2 init fail");
-    return -1;
-  }
+	if (_can2.initCan(1) < 0) {
+		PX4_ERR("can2 init fail");
+		return -1;
+	}
 
-  if (_can1.start() < 0)
-  {
-    PX4_ERR("can1 start fail");
-    return -1;
-  };
+	if (_can1.start() < 0) {
+		PX4_ERR("can1 start fail");
+		return -1;
+	};
 
-  if (_can2.start() < 0)
-  {
-    PX4_ERR("can2 start fail");
-    return -1;
-  };
+	if (_can2.start() < 0) {
+		PX4_ERR("can2 start fail");
+		return -1;
+	};
 
-  int32_t Joican_enable = 1;
+	int32_t Joican_enable = 1;
 
-  (void)param_get(param_find("JOICAN_ENABLE"), &Joican_enable);
+	(void)param_get(param_find("JOICAN_ENABLE"), &Joican_enable);
 
-  if (Joican_enable > 0)
-  {
-    PX4_INFO("joican enable");
-  }
+	if (Joican_enable > 0) {
+		PX4_INFO("joican enable");
+	}
 
-  return 0;
+	return 0;
 }
-int Joican::print_usage(const char* reason)
+int Joican::print_usage(const char *reason)
 {
-  if (reason)
-  {
-    PX4_WARN("%s\n", reason);
-  }
+	if (reason) {
+		PX4_WARN("%s\n", reason);
+	}
 
-  PRINT_MODULE_DESCRIPTION(
-      R"DESCR_STR(
+	PRINT_MODULE_DESCRIPTION(
+		R"DESCR_STR(
 ### Description
 This module is responsible for driving damiao joint can.
 )DESCR_STR");
@@ -266,6 +259,16 @@ void Joican::parameters_updated()
   _can2_servo[1].reverse = _param_joican_c2s2_rev.get();
   _can2_servo[2].reverse = _param_joican_c2s3_rev.get();
   _can2_servo[3].reverse = _param_joican_c2s4_rev.get();
+
+  float lp_cutoff = _param_joican_servo_cutoff.get();
+  for(int i = 0;i < 4;++i)
+  {
+	_lp_can1_servo[i].set_cutoff_frequency(_filter_sample_rate_hz,lp_cutoff);
+	_lp_can1_servo[i].reset(0);
+
+	_lp_can2_servo[i].set_cutoff_frequency(_filter_sample_rate_hz,lp_cutoff);
+	_lp_can2_servo[i].reset(0);
+  }
 }
 void Joican::setCountCorRet(const int16_t ret, int& sucess_count, int& fail_count)
 {
@@ -313,11 +316,8 @@ void Joican::Run()
     init();
     _is_init = true;
   }
-  if (_enabled_servo < 4)
-  {
-    _enabled_servo++;
-    ServoEnable(_enabled_servo);
-  }
+
+  ServoEnable();
 
   perf_begin(_cycle_perf);
   perf_count(_interval_perf);
@@ -334,6 +334,12 @@ void Joican::Run()
     parameters_updated();
   }
 
+  _now_time = hrt_absolute_time();
+
+  _mixing_output.update();
+  // check at end of cycle (updateSubscriptions() can potentially change to a different WorkQueue thread)
+  _mixing_output.updateSubscriptions(true);
+
   can_frame frame;
   while (_can1.receive(frame))
   {
@@ -345,14 +351,6 @@ void Joican::Run()
     handReceiveFrame(frame, 2);
     _get_count++;
   }
-
-  _now_time = hrt_absolute_time();
-  if (_enabled_servo >= 4)
-  {
-    _mixing_output.update();
-  }
-  // check at end of cycle (updateSubscriptions() can potentially change to a different WorkQueue thread)
-  _mixing_output.updateSubscriptions(true);
 
   perf_end(_cycle_perf);
   return;
@@ -384,21 +382,55 @@ bool Joican::updateOutputs(bool stop_motors, uint16_t outputs[MAX_ACTUATORS], un
     {
       can_2_normalize_output = -can_2_normalize_output;
     }
-    _can1_servo_posctl[i].setAbsPosition(can_1_normalize_output + _can1_servo[i].zero_offset);	// [-1, 1]
-    _can2_servo_posctl[i].setAbsPosition(can_2_normalize_output + _can2_servo[i].zero_offset);	// [-1, 1]
+    can_1_normalize_output = _lp_can1_servo[i].apply(can_1_normalize_output);
+    can_2_normalize_output = _lp_can2_servo[i].apply(can_2_normalize_output);
+
+    if(_count < 10)
+    {
+	_can1_servo_posctl[i].setAbsPosition(can_1_normalize_output + _can1_servo[i].zero_offset);	// [-1, 1]
+    	_can2_servo_posctl[i].setAbsPosition(can_2_normalize_output + _can2_servo[i].zero_offset);	// [-1, 1]
+    }
+    else
+    {
+	_can1_servo_posctl[i].setAbsPosition(can_1_normalize_output + _can1_servo[i].zero_offset + _can1_servo[i].absolute_offset);	// [-1, 1]
+    	_can2_servo_posctl[i].setAbsPosition(can_2_normalize_output + _can2_servo[i].zero_offset + _can2_servo[i].absolute_offset);	// [-1, 1]
+    }
+
   }
-
-  sendServoSetpoint();
-
+  if (_is_all_servo_enable)
+  {
+  	sendServoSetpoint();
+  }
   return true;
 }
-void Joican::ServoEnable(uint8_t enable_id)
+
+void Joican::ServoEnable()
+{
+  if(!_is_all_servo_enable)
+  {
+	if (_enabled_servo < 4)
+  	{
+    		_enabled_servo++;
+    		ServoEnableById(_enabled_servo);
+  	}
+	else
+	{
+		if(_enable_times < 2)
+		{
+			_enabled_servo = 0;
+			_enable_times++;
+		}
+		else
+		{
+			_is_all_servo_enable = true;
+		}
+	}
+  }
+}
+
+void Joican::ServoEnableById(uint8_t enable_id)
 {
   ServoEnableFrame servo{ enable_id };
-  _can1.send(servo);
-  _can2.send(servo);
-
-  // send twice
   _can1.send(servo);
   _can2.send(servo);
 }
@@ -443,8 +475,8 @@ void Joican::handReceiveFrame(const can_frame& frame, const uint8_t can_instance
     return;
   }
 
-  // bug report: servo will not resend can frame even when it lost arbitration,
-  // which leads to first two servos don't get position feedback.
+  // bug report: servo will not resend its can_frame even when it losts arbitration,
+  // which leads to first two servos can not get position feedback.
   // possible solution: rearrange sent frames sequence making every frame will get position feedback
   servo->timestamp = _now_time;
   uint16_t p_raw = (frame.data[1] << 8) | frame.data[2];
@@ -457,6 +489,8 @@ void Joican::handReceiveFrame(const can_frame& frame, const uint8_t can_instance
   if (!servo->enable)
   {
     servo->enable = true;
-    // servo->absolute_offset = servo->position;
+
+    // normlize it
+    servo->absolute_offset = servo->position / M_PI_F * 2;
   }
 }

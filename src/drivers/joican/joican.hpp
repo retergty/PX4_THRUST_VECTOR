@@ -7,12 +7,14 @@
 #include <px4_platform_common/module.h>
 #include <px4_platform_common/tasks.h>
 #include <mixer_module/mixer_module.hpp>
+#include <lib/mathlib/math/filter/LowPassFilter2p.hpp>
+
 
 struct AbsPostionCtlFrame : public joican::can_frame
 {
   static constexpr uint8_t DataLength = 0x08;
-  static constexpr float Kp = 30.f;
-  static constexpr float Kd = 2.f;
+  static constexpr float Kp = 52.f;
+  static constexpr float Kd = 3.5f;
 
   static constexpr float PositionOffsetFactor = 12.5f;
   static constexpr float PositionMultiplyFactor = 65535.f / 25.f;
@@ -139,6 +141,7 @@ class Joican final : public ModuleBase<Joican>, public OutputModuleInterface
 {
 public:
   static constexpr int MAX_ACTUATORS = 8;
+  static constexpr float DEFAULT_RUNNING_RATE = 800;
   Joican()
     : OutputModuleInterface(MODULE_NAME "-actuators-servo", px4::wq_configurations::rate_ctrl)
     , _can1_servo_posctl{ 0x1, 0x2, 0x3, 0x4 }
@@ -169,7 +172,8 @@ public:
   void Run() override;
 
 private:
-  void ServoEnable(uint8_t enable_id);
+  void ServoEnable();
+  void ServoEnableById(uint8_t enable_id);
 
   void ServoDisable();
 
@@ -204,7 +208,10 @@ private:
   int16_t _can2_last_ret[4]{ 0, 0, 0, 0 };
 
   bool _is_init{ false };
+  bool _is_all_servo_enable{false};
   uint8_t _enabled_servo{0};
+  uint8_t _enable_times{0};
+
   int _count{ 0 };
   int _can1_sucess_count{ 0 };
   int _can1_fail_count{ 0 };
@@ -214,6 +221,11 @@ private:
   int _get_count{ 0 };
   ServoState _can1_servo[4]{ 0x1, 0x2, 0x3, 0x4 };
   ServoState _can2_servo[4]{ 0x1, 0x2, 0x3, 0x4 };
+
+  // low pass filter
+  math::LowPassFilter2p<float> _lp_can1_servo[4];
+  math::LowPassFilter2p<float> _lp_can2_servo[4];
+  float _filter_sample_rate_hz{DEFAULT_RUNNING_RATE};
 
   uORB::SubscriptionInterval _parameter_update_sub{ ORB_ID(parameter_update), 1_s };
   perf_counter_t _cycle_perf{ perf_alloc(PC_ELAPSED, MODULE_NAME ": cycle") };
@@ -237,5 +249,6 @@ private:
 		    (ParamInt<px4::params::JOICAN_C2S1_REV>)_param_joican_c2s1_rev,
 		    (ParamInt<px4::params::JOICAN_C2S2_REV>)_param_joican_c2s2_rev,
 		    (ParamInt<px4::params::JOICAN_C2S3_REV>)_param_joican_c2s3_rev,
-		    (ParamInt<px4::params::JOICAN_C2S4_REV>)_param_joican_c2s4_rev)
+		    (ParamInt<px4::params::JOICAN_C2S4_REV>)_param_joican_c2s4_rev,
+		    (ParamFloat<px4::params::JOICAN_SV_CUTOFF>)_param_joican_servo_cutoff)
 };
