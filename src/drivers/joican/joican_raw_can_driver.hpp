@@ -29,10 +29,15 @@ public:
   // non-block send
   int16_t send(const can_frame& frame);
 
-  // non-block multipul send
+  // non-block multiple send
   // return sended number
   // 0 means all send
   int16_t send(const can_frame* frame,int num);
+
+  // non-block multiple send, use index to arrange send frame
+  // return sended number
+  // 0 means all send
+  int16_t send(const can_frame* frame,const int * index, int num);
 
   // is fifo full
   bool isFifoFull();

@@ -150,7 +150,6 @@ void LoggedTopics::add_default_topics()
 	add_topic("vehicle_status");
 	add_optional_topic("vtol_vehicle_status", 200);
 	add_topic("wind", 1000);
-	add_topic("servo_angle",50);
 	add_topic("roll_pitch_setpoint",50);
 	// multi topics
 	add_optional_topic_multi("actuator_outputs", 100, 3);
@@ -276,6 +275,7 @@ void LoggedTopics::add_high_rate_topics()
 	add_topic("actuator_motors");
 	add_topic("actuator_outputs_debug");
 	add_topic("actuator_servos");
+	add_topic("servo_angle");
 	add_topic_multi("vehicle_thrust_setpoint", 0, 2);
 	add_topic_multi("vehicle_torque_setpoint", 0, 2);
 }

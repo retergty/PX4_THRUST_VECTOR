@@ -277,6 +277,17 @@ void Joican::setCountCorRet(const int16_t ret, int& sucess_count, int& fail_coun
   else
     fail_count++;
 }
+void Joican::moveIndex(int* index,int num)
+{
+  int tmp = index[0];
+  for(int i =0;i < num-1;++i)
+  {
+	index[i] = index[i+1];
+  }
+  index[num-1] = tmp;
+
+  return;
+}
 void Joican::sendServoSetpoint()
 {
   //   _can1_last_ret[0] = _can1.send(_can1_servo_posctl[0]);
@@ -291,8 +302,11 @@ void Joican::sendServoSetpoint()
   //   _can1_last_ret[3] = _can1.send(_can1_servo_posctl[3]);
   //   _can2_last_ret[3] = _can2.send(_can2_servo_posctl[3]);
 
-  _can1_last_ret[0] = _can1.send(_can1_servo_posctl, 4);
-  _can2_last_ret[0] = _can2.send(_can2_servo_posctl, 4);
+  _can1_last_ret[0] = _can1.send(_can1_servo_posctl,_can1_servo_posctl_index, 4);
+  _can2_last_ret[0] = _can2.send(_can2_servo_posctl,_can2_servo_posctl_index, 4);
+
+  moveIndex(_can1_servo_posctl_index,4);
+  moveIndex(_can2_servo_posctl_index,4);
 
   for (int i = 0; i < 4; ++i)
   {
@@ -352,6 +366,8 @@ void Joican::Run()
     _get_count++;
   }
 
+  publishServoAngle();
+
   perf_end(_cycle_perf);
   return;
 }
@@ -385,16 +401,16 @@ bool Joican::updateOutputs(bool stop_motors, uint16_t outputs[MAX_ACTUATORS], un
     can_1_normalize_output = _lp_can1_servo[i].apply(can_1_normalize_output);
     can_2_normalize_output = _lp_can2_servo[i].apply(can_2_normalize_output);
 
-    if(_count < 10)
-    {
-	_can1_servo_posctl[i].setAbsPosition(can_1_normalize_output + _can1_servo[i].zero_offset);	// [-1, 1]
-    	_can2_servo_posctl[i].setAbsPosition(can_2_normalize_output + _can2_servo[i].zero_offset);	// [-1, 1]
-    }
-    else
-    {
-	_can1_servo_posctl[i].setAbsPosition(can_1_normalize_output + _can1_servo[i].zero_offset + _can1_servo[i].absolute_offset);	// [-1, 1]
-    	_can2_servo_posctl[i].setAbsPosition(can_2_normalize_output + _can2_servo[i].zero_offset + _can2_servo[i].absolute_offset);	// [-1, 1]
-    }
+//     if(_count < 10)
+//     {
+    _can1_servo_posctl[i].setAbsPosition(can_1_normalize_output + _can1_servo[i].zero_offset);	// [-1, 1]
+    _can2_servo_posctl[i].setAbsPosition(can_2_normalize_output + _can2_servo[i].zero_offset);	// [-1, 1]
+//     }
+//     else
+//     {
+// 	_can1_servo_posctl[i].setAbsPosition(can_1_normalize_output + _can1_servo[i].zero_offset + _can1_servo[i].absolute_offset);	// [-1, 1]
+//     	_can2_servo_posctl[i].setAbsPosition(can_2_normalize_output + _can2_servo[i].zero_offset + _can2_servo[i].absolute_offset);	// [-1, 1]
+//     }
 
   }
   if (_is_all_servo_enable)
@@ -403,7 +419,16 @@ bool Joican::updateOutputs(bool stop_motors, uint16_t outputs[MAX_ACTUATORS], un
   }
   return true;
 }
-
+void Joican::publishServoAngle()
+{
+  _servo_angle.timestamp = _now_time;
+  for(int i =0;i < 4;++i)
+  {
+	_servo_angle.servo_angle[i] = _can1_servo[i].reverse ? -_can1_servo[i].position : _can1_servo[i].position;
+	_servo_angle.servo_angle[i + 4] = _can2_servo[i].reverse ? -_can2_servo[i].position : _can2_servo[i].position;
+  }
+  _servo_angle_pub.publish(_servo_angle);
+}
 void Joican::ServoEnable()
 {
   if(!_is_all_servo_enable)

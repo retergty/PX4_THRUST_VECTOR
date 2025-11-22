@@ -4,11 +4,11 @@
 #include <px4_platform_common/px4_config.h>
 #include <uORB/SubscriptionCallback.hpp>
 #include <uORB/topics/parameter_update.h>
+#include <uORB/topics/servo_angle.h>
 #include <px4_platform_common/module.h>
 #include <px4_platform_common/tasks.h>
 #include <mixer_module/mixer_module.hpp>
 #include <lib/mathlib/math/filter/LowPassFilter2p.hpp>
-
 
 struct AbsPostionCtlFrame : public joican::can_frame
 {
@@ -195,11 +195,18 @@ private:
 
   void setCountCorRet(const int16_t ret, int& sucess_count, int& fail_count);
 
+  //move index exp: [0,1,2,3] -> [1,2,3,0] -> [2,3,0,1] -> [3,0,1,2] -> [0,1,2,3]
+  static void moveIndex(int* index,int num);
+
+  void publishServoAngle();
 private:
   MixingOutput _mixing_output{ "JOICAN_SV", MAX_ACTUATORS, *this, MixingOutput::SchedulingPolicy::Auto, false, false };
 
   AbsPostionCtlFrame _can1_servo_posctl[4];
   AbsPostionCtlFrame _can2_servo_posctl[4];
+  int _can1_servo_posctl_index[4] { 0, 1, 2, 3};
+  int _can2_servo_posctl_index[4] { 0, 1, 2, 3};
+
   hrt_abstime _now_time{ 0 };
   joican::CanDriver _can1;
   joican::CanDriver _can2;
@@ -227,7 +234,10 @@ private:
   math::LowPassFilter2p<float> _lp_can2_servo[4];
   float _filter_sample_rate_hz{DEFAULT_RUNNING_RATE};
 
+  servo_angle_s _servo_angle;
   uORB::SubscriptionInterval _parameter_update_sub{ ORB_ID(parameter_update), 1_s };
+  uORB::Publication<servo_angle_s> _servo_angle_pub{ORB_ID(servo_angle)};
+
   perf_counter_t _cycle_perf{ perf_alloc(PC_ELAPSED, MODULE_NAME ": cycle") };
   perf_counter_t _interval_perf{ perf_alloc(PC_INTERVAL, MODULE_NAME ": interval") };
 

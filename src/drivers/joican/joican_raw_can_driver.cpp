@@ -1375,6 +1375,97 @@ int16_t CanDriver::send(const can_frame *frame, int num)
 #endif
 	return OK;
 }
+int16_t CanDriver::send(const can_frame* frame,const int * index, int num)
+{
+	struct fdcan_driver_s *const priv = _priv;
+
+	if (priv == nullptr) {
+		return -ENODEV;
+	}
+
+	if (num < 1) {
+		return -EIO;
+	}
+
+	irqstate_t flags = enter_critical_section();
+
+	/* First, check if there are any slots available in the queue */
+
+	uint32_t regval = getreg32(priv->base + STM32_FDCAN_TXFQS_OFFSET);
+
+	if ((regval & FDCAN_TXFQS_TFQF) == FDCAN_TXFQS_TFQF) {
+		/* Tx FIFO / Queue is full */
+		leave_critical_section(flags);
+		return -EBUSY;
+	}
+
+	/* Next, get the next available FIFO index from the controller */
+
+	regval = getreg32(priv->base + STM32_FDCAN_TXFQS_OFFSET);
+	const uint8_t mbi = (regval & FDCAN_TXFQS_TFQPI) >> FDCAN_TXFQS_TFQPI_SHIFT;
+	const uint8_t tffl = (regval & FDCAN_TXFQS_TFFL) >> FDCAN_TXFQS_TFFL_SHIFT;
+
+	if (tffl < num) {
+		//no enough space
+		leave_critical_section(flags);
+		return -EIO;
+	}
+
+	uint32_t txbar_put = 0;
+
+	for (int i = 0; i < num; ++i) {
+		/* Now, we can copy the CAN frame to the FIFO (in message RAM) */
+		const uint8_t mbinow = mbi + i;
+		const can_frame& cur_frame = frame[index[i]];
+
+		if (mbinow >= NUM_TX_FIFO) {
+			PX4_ERR("Invalid Tx mailbox index encountered in transmit\n");
+			leave_critical_section(flags);
+			return -EIO;
+		}
+
+		struct tx_fifo_s *mb = &priv->tx[mbinow];
+
+		/* Attempt to write frame */
+
+		union tx_fifo_header_u header;
+
+		if (cur_frame.can_id & CAN_EFF_FLAG) {
+			header.id.xtd = 1;
+			header.id.extid = cur_frame.can_id & CAN_EFF_MASK;
+
+		} else {
+			header.id.xtd = 0;
+			header.id.stdid = cur_frame.can_id & CAN_SFF_MASK;
+		}
+
+		header.id.esi = cur_frame.can_id & CAN_ERR_FLAG ? 1 : 0;
+		header.id.rtr = cur_frame.can_id & CAN_RTR_FLAG ? 1 : 0;
+		header.dlc = cur_frame.can_dlc;
+		header.brs = 0;  /* No bitrate switching */
+		header.fdf = 0;  /* Classic CAN frame, not CAN-FD */
+		header.efc = 0;  /* Don't store Tx events */
+		header.mm = mbinow; /* Mailbox Marker for our own use; just store FIFO index */
+
+		/* Store into message RAM */
+
+		mb->header.w0 = header.w0;
+		mb->header.w1 = header.w1;
+		memcpy(mb->data, cur_frame.data, cur_frame.can_dlc);
+
+		txbar_put |= 1 << mbinow;
+
+		/* Increment statistics */
+		priv->txmb[mbinow].pending = TX_BUSY;
+	}
+
+	putreg32(txbar_put, priv->base + STM32_FDCAN_TXBAR_OFFSET);
+	leave_critical_section(flags);
+#if JOICAN_DEBUG==1
+	priv->_send_count += num;
+#endif
+	return OK;
+}
 int16_t CanDriver::receive(can_frame &out_frame)
 {
 	return _priv->rx_buf.pop(out_frame);

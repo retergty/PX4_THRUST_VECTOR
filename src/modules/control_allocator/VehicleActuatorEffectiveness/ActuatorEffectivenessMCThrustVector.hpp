@@ -67,5 +67,4 @@ protected:
 private:
 	vehicle_attitude_setpoint_s _att_sp;
 	uORB::Subscription _attitude_setpoint_sub{ORB_ID(vehicle_attitude_setpoint)};
-	uORB::Publication<servo_angle_s> _servo_angle_pub{ORB_ID(servo_angle)};
 };
