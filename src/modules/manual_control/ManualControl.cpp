@@ -241,10 +241,12 @@ void ManualControl::processSwitches(hrt_abstime &now)
 				    && _previous_switches.gear_switch != manual_control_switches_s::SWITCH_POS_NONE) {
 
 					if (switches.gear_switch == manual_control_switches_s::SWITCH_POS_ON) {
-						publishLandingGear(landing_gear_s::GEAR_UP);
+						//publishLandingGear(landing_gear_s::GEAR_UP);
+						publishThrustVectorMode(thrust_vector_mode_s::ThrustVector);
 
 					} else if (switches.gear_switch == manual_control_switches_s::SWITCH_POS_OFF) {
-						publishLandingGear(landing_gear_s::GEAR_DOWN);
+						//publishLandingGear(landing_gear_s::GEAR_DOWN);
+						publishThrustVectorMode(thrust_vector_mode_s::Normal);
 					}
 				}
 
@@ -458,6 +460,16 @@ void ManualControl::publishLandingGear(int8_t action)
 	landing_gear.landing_gear = action;
 	landing_gear.timestamp = hrt_absolute_time();
 	_landing_gear_pub.publish(landing_gear);
+}
+void ManualControl::publishThrustVectorMode(uint8_t mode)
+{
+	thrust_vector_mode_s thrust_vector_mode{};
+	thrust_vector_mode.timestamp = hrt_absolute_time();
+
+	thrust_vector_mode.mode = mode;
+
+	_thrust_vector_mode_pub.publish(thrust_vector_mode);
+
 }
 
 void ManualControl::send_camera_mode_command(CameraMode camera_mode)

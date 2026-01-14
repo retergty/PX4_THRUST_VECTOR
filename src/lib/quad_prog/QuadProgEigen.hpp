@@ -2,15 +2,16 @@
 
 #include <limits.h>
 
-#include <matrix/matrix/math.hpp>
+#include <eigen/Core>
 #include <mathlib/mathlib.h>
 
 template <typename Type, int Rows, int Cols>
-using Matrix = matrix::Matrix<Type, Rows, Cols>;
+using Matrix = Eigen::Matrix<Type, Rows, Cols>;
 template <typename Type, int Rows>
-using Vector = matrix::Vector<Type, Rows>;
+using Vector = Eigen::Vector<Type, Rows>;
 
 #include "CholeskyDecomposition.hpp"
+#include "KKTMethod.hpp"
 /**
 The problem is in the form:
 
@@ -33,7 +34,7 @@ s.t.
      x: n
  */
 template <typename Scalar, int DIMISIONS, int EQST, int IEQST>
-class QuadProgNew
+class QuadProg
 {
 public:
 	enum class QuadProgState {
@@ -54,7 +55,7 @@ public:
 		StepInPrimalAndDualSpace  // step 2(c) iii
 	};
 
-	QuadProgNew(const Scalar error_bound = FLT_EPSILON) : error_bound_(error_bound)
+	QuadProg(const Scalar error_bound = FLT_EPSILON) : error_bound_(error_bound), kkt_(error_bound)
 	{
 	}
 	void init(const Matrix<Scalar, DIMISIONS, DIMISIONS> &G, const Vector<Scalar, DIMISIONS> &g0,
@@ -68,22 +69,10 @@ public:
 		ci0_ = ci0;
 
 		State_ = QuadProgState::Init;
+		equal_constrians_calculate_ = false;
 
 		InitCholeskyMatrix(G);
-	}
-	void init(const DiagnoalMatrix<Scalar, DIMISIONS> &G, const Vector<Scalar, DIMISIONS> &g0,
-		  const Matrix<Scalar, DIMISIONS, EQST> &CE, const Vector<Scalar, EQST> &ce0,
-		  const Matrix<Scalar, DIMISIONS, IEQST> &CI, const Vector<Scalar, IEQST> &ci0)
-	{
-		g0_ = g0;
-		CE_ = CE;
-		ce0_ = ce0;
-		CI_ = CI;
-		ci0_ = ci0;
-
-		State_ = QuadProgState::Init;
-
-		InitCholeskyMatrix(G);
+		InitKKTMatrix(G_.Inverse());
 	}
 	bool Solve()
 	{
@@ -116,7 +105,6 @@ public:
 			switch (State_) {
 			case QuadProgState::Init:
 			case QuadProgState::UnconstrainMin: {
-					ComputeUnconstrainMin();
 					ComputeEqualConstrainMin();
 
 					iq = EQST;
@@ -352,31 +340,46 @@ public:
 
 		return true;
 	}
-	// update G
-	void updateScalarMatrix(const DiagnoalMatrix<Scalar, DIMISIONS> &G)
+	void UpdateConstrains(const Matrix<Scalar, DIMISIONS, EQST> &CE, const Vector<Scalar, EQST> &ce0,
+			      const Matrix<Scalar, DIMISIONS, IEQST> &CI, const Vector<Scalar, IEQST> &ci0)
 	{
-		InitCholeskyMatrix(G);
+		CE_ = CE;
+		ce0_ = ce0;
+		CI_ = CI;
+		ci0_ = ci0;
+
+		InitKKTMatrix(G_.Inverse());
+		equal_constrians_calculate_ = false;
+
 		State_ = QuadProgState::UnconstrainMin;
 	}
-	Matrix<Scalar, DIMISIONS, IEQST> &GetCIRef()
+	void UpdateInequalConstrains(const Matrix<Scalar,DIMISIONS,IEQST>& CI,const Vector<Scalar,IEQST>& ci0)
+	{
+		CI_ = CI;
+		ci0_ = ci0;
+		State_ = QuadProgState::UnconstrainMin;
+	}
+	void UpdateVectorConstrains(const Vector<Scalar, EQST> &ce0, const Vector<Scalar, IEQST> &ci0)
+	{
+		ce0_ = ce0;
+		ci0_ = ci0;
+
+		State_ = QuadProgState::UnconstrainMin;
+	}
+	Matrix<Scalar,DIMISIONS,IEQST>& GetCIRef()
 	{
 		State_ = QuadProgState::UnconstrainMin;
 		return CI_;
 	}
-	Vector<Scalar, EQST> &GetCe0Ref()
+	Vector<Scalar,EQST>& GetCe0Ref()
 	{
 		State_ = QuadProgState::UnconstrainMin;
 		return ce0_;
 	}
-	Vector<Scalar, IEQST> &GetCI0Ref()
+	Vector<Scalar,IEQST>& GetCI0Ref()
 	{
 		State_ = QuadProgState::UnconstrainMin;
 		return ci0_;
-	}
-	Matrix<Scalar, DIMISIONS, EQST> &GetCERef()
-	{
-		State_ = QuadProgState::UnconstrainMin;
-		return CE_;
 	}
 	Vector<Scalar, DIMISIONS> GetOptimalVector() const
 	{
@@ -394,54 +397,47 @@ public:
 	{
 		return iter_;
 	}
-	~QuadProgNew() = default;
+	~QuadProg() = default;
 
 private:
+	void InitKKTMatrix(const Matrix<Scalar, DIMISIONS, DIMISIONS> G_inv)
+	{
+		kkt_.InitProblemMatrix(CE_, g0_, G_inv);
+	}
 	void ComputeEqualConstrainMin()
 	{
-		/* Add equality constraints to the working set A */
+		if (!equal_constrians_calculate_) {
+			/* Add equality constraints to the working set A */
+			int iq = 0;
+			Vector<Scalar, DIMISIONS> d;
+			Vector<Scalar, DIMISIONS> np;
 
-		int iq = 0;
-		Vector<Scalar, DIMISIONS> z;
-		Vector<Scalar, DIMISIONS> r;
-		Vector<Scalar, DIMISIONS> d;
-		Vector<Scalar, DIMISIONS> np;
-		Vector<Scalar, EQST> u;
+			for (int i = 0; i < EQST; i++) {
+				np = CE_.col(i);
 
-		for (int i = 0; i < EQST; i++) {
-			np = CE_.col(i);
+				ComputeStepDirection(d, J_, np);
 
-			ComputeStepDirection(d, J_, np);
-
-			ComputeStepDirectionInPrimalSpace(z, J_, d, iq);
-			/* compute N* np (if q > 0): the negative of the step direction in the dual space */
-			ComputeStepDirectionInDualSpace(r, R_, d, iq);
-
-			/* compute full step length t2: i.e., the minimum step in primal space s.t. the contraint
-			becomes feasible */
-			float step_length = 0.0;
-
-			if (z.dot(z) > error_bound_) { // i.e. z != 0
-				step_length = (-np.dot(x_) - ce0_(i)) / z.dot(np);
+				if (!AddConstraint(d, iq)) {
+					return;
+				}
 			}
 
-			/* set x = x + t2 * z */
-			x_ += step_length * z;
+			equal_constrain_J_ = J_;
+			equal_constrain_R_ = R_;
+			equal_constrain_R_norm = R_norm_;
+			equal_constrians_calculate_ = true;
 
-			/* set u = u+ */
-			u(iq) = step_length;
-
-			for (int k = 0; k < iq; k++) {
-				u(k) -= step_length * r(k);
-			}
-
-			/* compute the new solution value */
-			f_value_ += static_cast<Scalar>(0.5) * (step_length * step_length) * z.dot(np);
-
-			if (!AddConstraint(d, iq)) {
-				return;
-			}
+		} else {
+			J_ = equal_constrain_J_;
+			R_ = equal_constrain_R_;
+			equal_constrain_R_norm = R_norm_;
 		}
+
+		kkt_.Solve(ce0_);
+
+		x_ = kkt_.GetOptimalVector();
+		Vector<Scalar, DIMISIONS> ltx = G_LT_ * x_;
+		f_value_ = static_cast<Scalar>(0.5) * ltx.dot(ltx) + g0_.dot(x_);
 	}
 	inline void ComputeUnconstrainMin()
 	{
@@ -463,6 +459,7 @@ private:
 		}
 
 		G_.Decomposition(G);
+		G_LT_ = G_.GetMatrixLT();
 
 		Vector<Scalar, DIMISIONS> b;
 		b.setZero();
@@ -699,8 +696,17 @@ private:
 	Vector<Scalar, DIMISIONS> x_;
 	Scalar f_value_;
 
+	// saved equal constrain matrix, used by continuing calculation
+	bool equal_constrians_calculate_;
+	Matrix<Scalar, DIMISIONS, DIMISIONS> equal_constrain_J_;
+	Matrix<Scalar, DIMISIONS, DIMISIONS> equal_constrain_R_;
+	Scalar equal_constrain_R_norm;
+
+	KKTMethod<Scalar, DIMISIONS, EQST> kkt_;
+
 	// problems matrix
 	CholeskyDecomposition<Scalar, DIMISIONS> G_; // positive defined save in L*L^T decompsition
+	Matrix<Scalar, DIMISIONS, DIMISIONS> G_LT_;
 	Vector<Scalar, DIMISIONS> g0_;
 	Matrix<Scalar, DIMISIONS, EQST> CE_;
 	Vector<Scalar, EQST> ce0_;

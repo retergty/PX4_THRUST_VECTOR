@@ -45,6 +45,7 @@
 #include <uORB/topics/landing_gear.h>
 #include <uORB/topics/manual_control_switches.h>
 #include <uORB/topics/manual_control_setpoint.h>
+#include <uORB/topics/thrust_vector_mode.h>
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/Publication.hpp>
@@ -90,6 +91,7 @@ private:
 	void evaluateModeSlot(uint8_t mode_slot);
 	void sendActionRequest(int8_t action, int8_t source, int8_t mode = 0);
 	void publishLandingGear(int8_t action);
+	void publishThrustVectorMode(uint8_t on);
 
 	enum class CameraMode {
 		Image = 0,
@@ -111,6 +113,7 @@ private:
 	uORB::Publication<action_request_s> _action_request_pub{ORB_ID(action_request)};
 	uORB::Publication<landing_gear_s> _landing_gear_pub{ORB_ID(landing_gear)};
 	uORB::Publication<manual_control_setpoint_s> _manual_control_setpoint_pub{ORB_ID(manual_control_setpoint)};
+	uORB::Publication<thrust_vector_mode_s> _thrust_vector_mode_pub{ORB_ID(thrust_vector_mode)};
 
 	ManualControlSelector _selector;
 

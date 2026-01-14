@@ -43,40 +43,50 @@ using namespace matrix;
 
 namespace ControlMath
 {
-void thrustToAttitude(const Vector3f &thr_sp, const float yaw_sp, const float roll_sp, const float pitch_sp,
-		      vehicle_attitude_setpoint_s &att_sp)
+
+ControlModes GetControlModes(const float roll_sp, const float pitch_sp, const float yaw_sp)
 {
-	ControlState control_state = ControlState::Normal;
+	(void) yaw_sp;
+
+	ControlModes control_modes = ControlModes::Normal;
 
 	if (std::isnan(roll_sp)) {
 		if (std::isnan(pitch_sp)) {
-			control_state = ControlState::Normal;
+			control_modes = ControlModes::Normal;
 
 		} else {
-			control_state = ControlState::PitchTilt;
+			control_modes = ControlModes::PitchTilt;
 		}
 
 	} else {
 		if (std::isnan(pitch_sp)) {
-			control_state = ControlState::RollTilt;
+			control_modes = ControlModes::RollTilt;
 
 		} else {
-			control_state = ControlState::ThrustVector;
+			control_modes = ControlModes::ThrustVector;
 		}
 	}
 
-	if (control_state == ControlState::Normal) {
+	return control_modes;
+}
+
+void thrustToAttitude(const Vector3f &thr_sp, const float yaw_sp, const float roll_sp, const float pitch_sp,
+		      vehicle_attitude_setpoint_s &att_sp)
+{
+	ControlModes control_modes = GetControlModes(roll_sp, pitch_sp, yaw_sp);
+
+	if (control_modes == ControlModes::Normal) {
 		bodyzToAttitude(-thr_sp, yaw_sp, att_sp);
 		Quaternionf q_sp{att_sp.q_d};
 		Vector3f thrust_body = q_sp.rotateVectorInverse(thr_sp);
 		thrust_body.copyTo(att_sp.thrust_body);
 	}
 
-	if (control_state == ControlState::RollTilt) {
-		control_state = ControlState::ThrustVector;
+	if (control_modes == ControlModes::RollTilt) {
+		control_modes = ControlModes::ThrustVector;
 	}
 
-	if (control_state == ControlState::PitchTilt) {
+	if (control_modes == ControlModes::PitchTilt) {
 		Quaternionf q_y{AxisAnglef(Vector3f(0, 1, 0), pitch_sp)};
 		Quaternionf q_z{AxisAnglef(Vector3f(0, 0, 1), yaw_sp)};
 		Quaternionf q_z_y = q_z * q_y;
@@ -105,7 +115,7 @@ void thrustToAttitude(const Vector3f &thr_sp, const float yaw_sp, const float ro
 		thrust_body.copyTo(att_sp.thrust_body);
 	}
 
-	if (control_state == ControlState::ThrustVector) {
+	if (control_modes == ControlModes::ThrustVector) {
 		Quaternionf q_sp{Eulerf(roll_sp, pitch_sp, yaw_sp)};
 		Vector3f thrust_body = q_sp.rotateVectorInverse(thr_sp);
 		q_sp.copyTo(att_sp.q_d);

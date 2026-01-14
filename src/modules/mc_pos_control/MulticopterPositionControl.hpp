@@ -69,6 +69,7 @@
 #include <uORB/topics/vehicle_local_position_setpoint.h>
 #include <uORB/topics/roll_pitch_setpoint.h>
 #include <uORB/topics/vehicle_attitude.h>
+#include <uORB/topics/thrust_vector_mode.h>
 
 using namespace time_literals;
 
@@ -112,14 +113,16 @@ private:
 	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};
 	uORB::Subscription _roll_pitch_setpoint_sub{ORB_ID(roll_pitch_setpoint)};
 	//uORB::Subscription _vehicle_attitude_sub{ORB_ID(vehicle_attitude)};
+	uORB::Subscription _thrust_vector_mode_sub{ORB_ID(thrust_vector_mode)};
 
 	hrt_abstime _time_stamp_last_loop{0};		/**< time stamp of last loop iteration */
 	hrt_abstime _time_position_control_enabled{0};
 
 	trajectory_setpoint_s _setpoint{PositionControl::empty_trajectory_setpoint};
-	roll_pitch_setpoint_s _roll_pitch_sp{.timestamp = 0, .pitch = NAN,.roll = NAN};
+	roll_pitch_setpoint_s _roll_pitch_sp{.timestamp = 0, .pitch = NAN, .roll = NAN};
 	//vehicle_attitude_s _vehicle_att{.timestamp = 0, .q{1, 0, 0, 0}};
 	vehicle_control_mode_s _vehicle_control_mode{};
+	thrust_vector_mode_s _thrust_vector_mode{};
 
 	vehicle_constraints_s _vehicle_constraints {
 		.timestamp = 0,

@@ -242,6 +242,7 @@ ControlAllocator::Run()
 			do_update = true;
 			_timestamp_sample = vehicle_thrust_setpoint.timestamp_sample;
 		}
+
 	}
 
 	if (do_update) {

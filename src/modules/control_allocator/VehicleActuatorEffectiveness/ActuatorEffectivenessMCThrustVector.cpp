@@ -56,5 +56,5 @@ void ActuatorEffectivenessMCThrustVector::updateSetpoint(const matrix::Vector<fl
 		int matrix_index, ActuatorVector &actuator_sp, const matrix::Vector<float, NUM_ACTUATORS> &actuator_min,
 		const matrix::Vector<float, NUM_ACTUATORS> &actuator_max)
 {
-	actuator_sp = _mc_rotors.computeActuatorSetpoint(actuator_sp);
+	//actuator_sp = _mc_rotors.computeActuatorSetpoint(actuator_sp);
 }

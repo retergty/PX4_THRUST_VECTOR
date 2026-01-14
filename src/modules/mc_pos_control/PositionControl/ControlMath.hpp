@@ -46,12 +46,22 @@
 namespace ControlMath
 {
 
-enum class ControlState {
+enum class ControlModes {
 	Normal,
 	PitchTilt,
 	RollTilt,
 	ThrustVector
 };
+
+/**
+ * Evalutate Control Mode
+ * @param roll_sp
+ * @param pitch_sp
+ * @param yaw_sp
+ * @return ControlModes
+ */
+
+inline ControlModes GetControlModes(const float roll_sp, const float pitch_sp, const float yaw_sp);
 
 /**
  * Converts thrust vector and yaw set-point to a desired attitude.

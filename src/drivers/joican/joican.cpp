@@ -509,7 +509,7 @@ void Joican::handReceiveFrame(const can_frame& frame, const uint8_t can_instance
   // uint16_t t_raw = ((frame.data[4] & 0xF) << 8) | frame.data[5];
 
   // only convert position because we only need position
-  servo->position = AbsPostionCtlFrame::positionDecoder(p_raw);
+  servo->position = AbsPostionCtlFrame::positionDecoder(p_raw) / M_PI_F * 2;
 
   if (!servo->enable)
   {

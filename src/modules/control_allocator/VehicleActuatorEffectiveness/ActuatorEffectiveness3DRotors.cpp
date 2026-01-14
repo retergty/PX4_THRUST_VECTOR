@@ -83,53 +83,6 @@ ActuatorEffectiveness3DRotors::ActuatorEffectiveness3DRotors(ModuleParams *paren
 
 	updateParams();
 }
-void ActuatorEffectiveness3DRotors::checkNumericStableAndSetMotorSetpoint(const matrix::Vector<float, 12> &force_vector,
-		matrix::Vector3f motor_thr_sp[4])
-{
-	for (size_t i = 0; i < 4; ++i) {
-		if (force_vector(i * 3) < 0.f) {
-			motor_thr_sp[i](0) = 0.f;
-
-		} else {
-			motor_thr_sp[i](0) = force_vector(i * 3);
-		}
-
-		motor_thr_sp[i](1) = force_vector(i * 3 + 1);
-		motor_thr_sp[i](2) = force_vector(i * 3 + 2);
-	}
-
-}
-matrix::Vector<float, 12>
-ActuatorEffectiveness3DRotors::computeActuatorSetpoint(const matrix::Vector<float, 12> &force_vector)
-{
-	matrix::Vector<float, 12> actuator_setpoint;
-
-	Vector3f motor_thr_sp[4];
-
-	checkNumericStableAndSetMotorSetpoint(force_vector, motor_thr_sp);
-
-	for (size_t i = 0; i < 4; ++i) {
-		//_servo_angle[i](0) = atanf(-motor_thr_sp[i](1) / motor_thr_sp[i](2));
-		_servo_angle[i](0) = atan2f(motor_thr_sp[i](1), -motor_thr_sp[i](2));
-		_servo_angle[i](1) = atanf(motor_thr_sp[i](0) / (motor_thr_sp[i](2) * cosf(_servo_angle[i](0)) -
-					   motor_thr_sp[i](1) * sinf(_servo_angle[i](0))));
-		_rotor_speed[i] = motor_thr_sp[i].length() / _geometry.rotors[i].thrust_coef;
-	}
-
-	for (size_t i = 0; i < 4; ++i) {
-		actuator_setpoint(i) = _rotor_speed[i];
-		actuator_setpoint(i + 4) = _servo_angle[i](0) / M_PI_F * 2;
-		actuator_setpoint(i + 8) = -_servo_angle[i](1) / M_PI_F * 2;
-
-		if (actuator_setpoint(i + 8) <= -0.03f) {
-			//PX4_INFO("angle limit! %f", (double)(-_servo_angle[i](1)));
-			actuator_setpoint(i + 8) = -0.03f;
-		}
-	}
-
-	return actuator_setpoint;
-}
-
 void ActuatorEffectiveness3DRotors::updateParams()
 {
 	ModuleParams::updateParams();

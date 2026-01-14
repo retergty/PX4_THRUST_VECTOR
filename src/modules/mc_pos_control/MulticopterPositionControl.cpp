@@ -436,7 +436,19 @@ void MulticopterPositionControl::Run()
 
 		_trajectory_setpoint_sub.update(&_setpoint);
 		_roll_pitch_setpoint_sub.update(&_roll_pitch_sp);
+
 		//_vehicle_attitude_sub.update(&_vehicle_att);
+		if (_thrust_vector_mode_sub.update(&_thrust_vector_mode)) {
+			if (_thrust_vector_mode.mode == thrust_vector_mode_s::ThrustVector) {
+				_roll_pitch_sp.roll = 0;
+				_roll_pitch_sp.pitch = 0;
+
+			} else if(_thrust_vector_mode.mode == thrust_vector_mode_s::Normal)
+			{
+				_roll_pitch_sp.roll = NAN;
+				_roll_pitch_sp.pitch = NAN;
+			}
+		}
 
 		adjustSetpointForEKFResets(vehicle_local_position, _setpoint);
 

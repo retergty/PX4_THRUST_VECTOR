@@ -281,8 +281,10 @@ void PositionControl::getAttitudeSetpoint(vehicle_attitude_setpoint_s &attitude_
 		attitude_setpoint.thrust_body[0] = 0.f;
 
 	}
-	if(std::isnan(_roll_sp)){
+
+	if (std::isnan(_roll_sp)) {
 		attitude_setpoint.thrust_body[1] = 0.f;
 	}
+
 	attitude_setpoint.yaw_sp_move_rate = _yawspeed_sp;
 }
