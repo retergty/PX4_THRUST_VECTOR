@@ -69,7 +69,6 @@ private:
 	matrix::Vector<float, 12> computeActuatorSetpoint() const;
 
 	inline matrix::Dcmf calculateThrustVectorRotationMatrix(const int unit_index);
-	void setLinearizationPoint();
 
 	inline void updateMainQpSolver();
 private:
@@ -80,11 +79,10 @@ private:
 	//DiagnoalMatrix<float, 12> _G;
 	matrix::Vector<float, NUM_ACTUATORS> _safe_actuator_sp;  	///< Actuator setpoint
 	matrix::Vector<float, NUM_ACTUATORS> _last_success_actuator_sp;
-	ThrustVectorUnitSetpoint _thrust_vector_unit_setpoint[4];
 
+	ThrustVectorUnitSetpoint _thrust_vector_unit_setpoint[4];
 	ThrustVectorUnitGeometry _thrust_vector_unit_geometry[4];
-	ThrustVectorUnitSetpoint _linerization_point[4];
-	matrix::Matrix<float, 3, 4> _diff_effectiveness;
+
 	matrix::Vector<float, 6> _last_allocate_control_sp;
 
 	bool _last_qp_success{false};

@@ -91,50 +91,6 @@ void ControlAllocationThrustVector::print_status()
 	// }
 
 }
-void ControlAllocationThrustVector::setLinearizationPoint()
-{
-	for (int i = 0; i < 4; ++i) {
-		_linerization_point[i] = _thrust_vector_unit_setpoint[i];
-	}
-}
-matrix::Dcmf ControlAllocationThrustVector::calculateThrustVectorRotationMatrix(const int unit_index)
-{
-	matrix::Dcmf rotation;
-	float a = _linerization_point[unit_index].InnerAngle;
-	float b = _linerization_point[unit_index].OuterAngle;
-	float cos_a = cos(a);
-	float cos_b = cos(b);
-	float sin_a = sin(a);
-	float sin_b = sin(b);
-
-	rotation(0, 0) = cos_b; rotation(0, 1) =  0; rotation(0, 2) = sin_b;
-	rotation(1, 0) = sin_a * sin_b; rotation(1, 1) = cos_a; rotation(1, 2) = -sin_a * cos_b;
-	rotation(2, 0) = -cos_a * sin_b; rotation(2, 1) =  sin_a; rotation(2, 2) = cos_a * cos_b;
-
-	const matrix::Dcmf &body_to_local = _thrust_vector_unit_geometry[unit_index].rotation;
-
-	// matrix::Dcmf inner_dcm{matrix::AxisAnglef(matrix::Vector3f(1, 0, 0), _linerization_point[unit_index].InnerAngle)};
-	// matrix::Dcmf outer_dcm{matrix::AxisAnglef(matrix::Vector3f(0, 1, 0), _linerization_point[unit_index].OuterAngle)};
-	// rotation = inner_dcm * outer_dcm;
-
-	return body_to_local * rotation;
-}
-bool ControlAllocationThrustVector::isThrustSetpointUpdated(const matrix::Vector<float, 6> control_sp) const
-{
-	matrix::Vector<float, 3> delta_thrust;
-	delta_thrust(0) =  control_sp(3) - _last_allocate_control_sp(3);
-	delta_thrust(1) =  control_sp(4) - _last_allocate_control_sp(4);
-	delta_thrust(2) =  control_sp(5) - _last_allocate_control_sp(5);
-
-	for (int i = 0; i < 3; ++i) {
-		if (abs(delta_thrust(i)) > 1e-4f) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
 void
 ControlAllocationThrustVector::updateQPState()
 {
@@ -343,7 +299,6 @@ ControlAllocationThrustVector::allocate()
 	if (_main_qp.Solve()) {
 		_last_qp_success = true;
 		computeMainQpSetpoint(_main_qp.GetOptimalVector());
-		setLinearizationPoint();
 
 		_last_allocate_control_sp = _control_sp;
 
