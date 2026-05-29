@@ -9,120 +9,122 @@
 
 #pragma once
 
-#include "SquareMatrix.hpp"
-#include "Vector.hpp"
+#include "matrix/SquareMatrix.hpp"
+#include "matrix/Vector.hpp"
 
-namespace matrix
-{
+namespace matrix {
 
 /**
  * Geninv
  * Fast pseudoinverse based on full rank cholesky factorisation
  *
- * Courrieu, P. (2008). Fast Computation of Moore-Penrose Inverse Matrices, 8(2), 25–29. http://arxiv.org/abs/0804.4809
+ * Courrieu, P. (2008). Fast Computation of Moore-Penrose Inverse Matrices,
+ * 8(2), 25–29. http://arxiv.org/abs/0804.4809
  */
-template<typename Type, size_t M, size_t N>
-bool geninv(const Matrix<Type, M, N> &G, Matrix<Type, N, M> &res)
-{
-	size_t rank;
+template <typename Type, int M, int N>
+bool geninv(const Matrix<Type, M, N>& G, Matrix<Type, N, M>& res) {
+  static_assert(M >= 0, "Matrix row count must be non-negative");
+  static_assert(N >= 0, "Matrix column count must be non-negative");
 
-	if (M <= N) {
-		SquareMatrix<Type, M> A = G * G.transpose();
-		SquareMatrix<Type, M> L = fullRankCholesky(A, rank);
+  size_t rank;
 
-		A = L.transpose() * L;
-		SquareMatrix<Type, M> X;
+  if (M <= N) {
+    SquareMatrix<Type, M> A = G * G.transpose();
+    SquareMatrix<Type, M> L = fullRankCholesky(A, rank);
 
-		if (!inv(A, X, rank)) {
-			res = Matrix<Type, N, M>();
-			return false; // LCOV_EXCL_LINE -- this can only be hit from numerical issues
-		}
+    A = L.transpose() * L;
+    SquareMatrix<Type, M> X;
 
-		// doing an intermediate assignment reduces stack usage
-		A = X * X * L.transpose();
-		res = G.transpose() * (L * A);
+    if (!inv(A, X, rank)) {
+      res = Matrix<Type, N, M>();
+      return false;  // LCOV_EXCL_LINE -- this can only be hit from numerical
+                     // issues
+    }
 
-	} else {
-		SquareMatrix<Type, N> A = G.transpose() * G;
-		SquareMatrix<Type, N> L = fullRankCholesky(A, rank);
+    // doing an intermediate assignment reduces stack usage
+    A = X * X * L.transpose();
+    res = G.transpose() * (L * A);
 
-		A = L.transpose() * L;
-		SquareMatrix<Type, N> X;
+  } else {
+    SquareMatrix<Type, N> A = G.transpose() * G;
+    SquareMatrix<Type, N> L = fullRankCholesky(A, rank);
 
-		if (!inv(A, X, rank)) {
-			res = Matrix<Type, N, M>();
-			return false; // LCOV_EXCL_LINE -- this can only be hit from numerical issues
-		}
+    A = L.transpose() * L;
+    SquareMatrix<Type, N> X;
 
-		// doing an intermediate assignment reduces stack usage
-		A = X * X * L.transpose();
-		res = (L * A) * G.transpose();
-	}
+    if (!inv(A, X, rank)) {
+      res = Matrix<Type, N, M>();
+      return false;  // LCOV_EXCL_LINE -- this can only be hit from numerical
+                     // issues
+    }
 
-	return true;
+    // doing an intermediate assignment reduces stack usage
+    A = X * X * L.transpose();
+    res = (L * A) * G.transpose();
+  }
+
+  return true;
 }
 
-
-template<typename Type>
+template <typename Type>
 Type typeEpsilon();
 
-template<> inline
-float typeEpsilon<float>()
-{
-	return FLT_EPSILON;
+template <>
+inline float typeEpsilon<float>() {
+  return FLT_EPSILON;
 }
 
 /**
  * Full rank Cholesky factorization of A
  */
-template<typename Type, size_t N>
-SquareMatrix<Type, N> fullRankCholesky(const SquareMatrix<Type, N> &A,
-				       size_t &rank)
-{
-	// Loses one ulp accuracy per row of diag, relative to largest magnitude
-	const Type tol = N * typeEpsilon<Type>() * A.diag().max();
+template <typename Type, int N>
+SquareMatrix<Type, N> fullRankCholesky(const SquareMatrix<Type, N>& A,
+                                       size_t& rank) {
+  static_assert(N >= 0, "Matrix dimension must be non-negative");
 
-	Matrix<Type, N, N> L;
+  // Loses one ulp accuracy per row of diag, relative to largest magnitude
+  const Type tol = N * typeEpsilon<Type>() * A.diag().max();
 
-	size_t r = 0;
+  Matrix<Type, N, N> L;
 
-	for (size_t k = 0; k < N; k++) {
+  size_t r = 0;
 
-		if (r == 0) {
-			for (size_t i = k; i < N; i++) {
-				L(i, r) = A(i, k);
-			}
+  for (size_t k = 0; k < N; k++) {
+    if (r == 0) {
+      for (size_t i = k; i < N; i++) {
+        L(i, r) = A(i, k);
+      }
 
-		} else {
-			for (size_t i = k; i < N; i++) {
-				// Compute LL = L[k:n, :r] * L[k, :r].T
-				Type LL = Type();
+    } else {
+      for (size_t i = k; i < N; i++) {
+        // Compute LL = L[k:n, :r] * L[k, :r].T
+        Type LL = Type();
 
-				for (size_t j = 0; j < r; j++) {
-					LL += L(i, j) * L(k, j);
-				}
+        for (size_t j = 0; j < r; j++) {
+          LL += L(i, j) * L(k, j);
+        }
 
-				L(i, r) = A(i, k) - LL;
-			}
-		}
+        L(i, r) = A(i, k) - LL;
+      }
+    }
 
-		if (L(k, r) > tol) {
-			L(k, r) = std::sqrt(L(k, r));
+    if (L(k, r) > tol) {
+      L(k, r) = std::sqrt(L(k, r));
 
-			if (k < N - 1) {
-				for (size_t i = k + 1; i < N; i++) {
-					L(i, r) = L(i, r) / L(k, r);
-				}
-			}
+      if (k < N - 1) {
+        for (size_t i = k + 1; i < N; i++) {
+          L(i, r) = L(i, r) / L(k, r);
+        }
+      }
 
-			r = r + 1;
-		}
-	}
+      r = r + 1;
+    }
+  }
 
-	// Return rank
-	rank = r;
+  // Return rank
+  rank = r;
 
-	return L;
+  return L;
 }
 
-} // namespace matrix
+}  // namespace matrix

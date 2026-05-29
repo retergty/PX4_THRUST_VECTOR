@@ -47,7 +47,7 @@ namespace
  * Generic in-place bezier implementation. Leaves result in first element.
  *
  */
-template <typename Scalar, size_t D>
+template <typename Scalar, int D>
 void calculateBezier(matrix::Vector<Scalar, D> *positions, int N, Scalar t, Scalar one_minus_t)
 {
 	for (int bezier_order = 1; bezier_order < N; bezier_order++) {
