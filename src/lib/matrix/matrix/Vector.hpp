@@ -26,6 +26,15 @@ class Vector : public Matrix<Type, M, 1> {
 
   Vector(const MatrixM1& other) : MatrixM1(other) {}
 
+  template <typename OtherType>
+  explicit Vector(const Vector<OtherType, M>& other) {
+    Vector& self(*this);
+
+    for (size_t i = 0; i < M; i++) {
+      self(i) = static_cast<Type>(other(i));
+    }
+  }
+
   explicit Vector(const Type data_[M]) : MatrixM1(data_) {}
 
   template <int P, int Q>

@@ -24,6 +24,11 @@ class Vector3 : public Vector<Type, 3> {
 
   Vector3(const Matrix31& other) : Vector<Type, 3>(other) {}
 
+  template <typename OtherType>
+  explicit Vector3(const Vector3<OtherType>& other)
+      : Vector3(static_cast<Type>(other(0)), static_cast<Type>(other(1)),
+                static_cast<Type>(other(2))) {}
+
   explicit Vector3(const Type data_[3]) : Vector<Type, 3>(data_) {}
 
   Vector3(Type x, Type y, Type z) {
