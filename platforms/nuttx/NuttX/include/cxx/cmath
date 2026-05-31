@@ -78,6 +78,10 @@ inline bool isinf(float value) { return __builtin_isinf_sign(value); }
 inline bool isinf(double value) { return __builtin_isinf_sign(value); }
 inline bool isinf(long double value) { return __builtin_isinf_sign(value); }
 
+inline float abs(float value) { return ::fabsf(value); }
+inline double abs(double value) { return ::fabs(value); }
+inline long double abs(long double value) { return ::fabsl(value); }
+
 /*
  * NuttX has no usable C++ math library, so we need to provide the needed definitions here manually.
  */
