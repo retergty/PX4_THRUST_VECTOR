@@ -1,0 +1,223 @@
+/****************************************************************************
+ *
+ *   Copyright (C) 2026 PX4 Development Team. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name PX4 nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ****************************************************************************/
+
+// Minimal std::tuple subset for NuttX builds using -nostdinc++.
+
+#pragma once
+
+#include <cstddef>
+#include <utility>
+
+namespace std
+{
+
+template<typename... Ts>
+class tuple;
+
+template<size_t I, typename... Ts>
+constexpr decltype(auto) get(tuple<Ts...> &t) noexcept;
+
+template<size_t I, typename... Ts>
+constexpr decltype(auto) get(const tuple<Ts...> &t) noexcept;
+
+namespace detail
+{
+
+template<size_t I, typename T, typename... Rest>
+struct tuple_type_at : tuple_type_at<I - 1, Rest...>
+{
+};
+
+template<typename T, typename... Rest>
+struct tuple_type_at<0, T, Rest...>
+{
+	using type = T;
+};
+
+template<size_t I, typename T>
+struct tuple_leaf
+{
+	T value;
+
+	constexpr tuple_leaf() : value() {}
+	constexpr tuple_leaf(const T &v) : value(v) {}
+};
+
+template<size_t I, typename T>
+struct tuple_leaf<I, T &>
+{
+	T &value;
+
+	constexpr tuple_leaf(T &v) : value(v) {}
+};
+
+template<typename IndexSeq, typename... Ts>
+class tuple_impl;
+
+template<size_t... Is, typename... Ts>
+class tuple_impl<index_sequence<Is...>, Ts...> : public tuple_leaf<Is, Ts>...
+{
+public:
+	constexpr tuple_impl() = default;
+	constexpr tuple_impl(const Ts &... values) : tuple_leaf<Is, Ts>(values)... {}
+
+	template<typename... Us>
+	tuple_impl &operator=(const tuple<Us...> &other)
+	{
+		assign(other, index_sequence_for<Us...>{});
+		return *this;
+	}
+
+	void swap(tuple_impl &other)
+	{
+		(void)other;
+		((std::swap(static_cast<tuple_leaf<Is, Ts> &>(*this).value,
+			    static_cast<tuple_leaf<Is, Ts> &>(other).value)), ...);
+	}
+
+private:
+	template<typename OtherTuple, size_t... Js>
+	void assign(const OtherTuple &other, index_sequence<Js...>)
+	{
+		((static_cast<tuple_leaf<Js, Ts> &>(*this).value = get<Js>(other)), ...);
+	}
+};
+
+template<>
+class tuple_impl<index_sequence<>>
+{
+public:
+	constexpr tuple_impl() = default;
+
+	template<typename... Us>
+	tuple_impl &operator=(const tuple<Us...> &)
+	{
+		return *this;
+	}
+
+	void swap(tuple_impl &) {}
+};
+
+template<typename Function, typename Tuple, size_t... Is>
+constexpr decltype(auto) apply_impl(Function &&f, Tuple &&t, index_sequence<Is...>)
+{
+	return std::forward<Function>(f)(get<Is>(std::forward<Tuple>(t))...);
+}
+
+} // namespace detail
+
+template<typename... Ts>
+class tuple : public detail::tuple_impl<index_sequence_for<Ts...>, Ts...>
+{
+	using Base = detail::tuple_impl<index_sequence_for<Ts...>, Ts...>;
+
+public:
+	constexpr tuple() = default;
+	constexpr tuple(const Ts &... values) : Base(values...) {}
+
+	using Base::operator=;
+	using Base::swap;
+};
+
+template<>
+class tuple<> : public detail::tuple_impl<index_sequence<>>
+{
+	using Base = detail::tuple_impl<index_sequence<>>;
+
+public:
+	constexpr tuple() = default;
+
+	using Base::operator=;
+	using Base::swap;
+};
+
+template<size_t I, typename Tuple>
+struct tuple_element;
+
+template<size_t I, typename... Ts>
+struct tuple_element<I, tuple<Ts...>>
+{
+	using type = typename detail::tuple_type_at<I, Ts...>::type;
+};
+
+template<size_t I, typename Tuple>
+using tuple_element_t = typename tuple_element<I, Tuple>::type;
+
+template<typename Tuple>
+struct tuple_size;
+
+template<typename... Ts>
+struct tuple_size<tuple<Ts...>>
+{
+	static constexpr size_t value = sizeof...(Ts);
+};
+
+template<size_t I, typename... Ts>
+constexpr decltype(auto) get(tuple<Ts...> &t) noexcept
+{
+	using Element = tuple_element_t<I, tuple<Ts...>>;
+	return (static_cast<detail::tuple_leaf<I, Element> &>(t).value);
+}
+
+template<size_t I, typename... Ts>
+constexpr decltype(auto) get(const tuple<Ts...> &t) noexcept
+{
+	using Element = tuple_element_t<I, tuple<Ts...>>;
+	return (static_cast<const detail::tuple_leaf<I, Element> &>(t).value);
+}
+
+template<typename... Ts>
+constexpr tuple<Ts...> make_tuple(Ts... values)
+{
+	return tuple<Ts...>(values...);
+}
+
+template<typename... Ts>
+constexpr tuple<Ts &...> tie(Ts &... values) noexcept
+{
+	return tuple<Ts &...>(values...);
+}
+
+template<typename Function, typename... Ts>
+constexpr decltype(auto) apply(Function &&f, tuple<Ts...> &t)
+{
+	return detail::apply_impl(std::forward<Function>(f), t, index_sequence_for<Ts...>{});
+}
+
+template<typename Function, typename... Ts>
+constexpr decltype(auto) apply(Function &&f, const tuple<Ts...> &t)
+{
+	return detail::apply_impl(std::forward<Function>(f), t, index_sequence_for<Ts...>{});
+}
+
+}

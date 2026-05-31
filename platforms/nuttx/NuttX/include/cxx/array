@@ -1,0 +1,113 @@
+/****************************************************************************
+ *
+ *   Copyright (C) 2026 PX4 Development Team. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name PX4 nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ****************************************************************************/
+
+// Minimal std::array for NuttX builds using -nostdinc++.
+
+#pragma once
+
+#include <cstddef>
+
+namespace std
+{
+
+template<typename T, size_t N>
+struct array
+{
+	using value_type = T;
+	using size_type = size_t;
+	using difference_type = ptrdiff_t;
+	using reference = value_type &;
+	using const_reference = const value_type &;
+	using pointer = value_type *;
+	using const_pointer = const value_type *;
+	using iterator = value_type *;
+	using const_iterator = const value_type *;
+
+	value_type _elems[N ? N : 1];
+
+	constexpr reference operator[](size_type index) noexcept { return _elems[index]; }
+	constexpr const_reference operator[](size_type index) const noexcept { return _elems[index]; }
+
+	constexpr reference front() noexcept { return _elems[0]; }
+	constexpr const_reference front() const noexcept { return _elems[0]; }
+	constexpr reference back() noexcept { return _elems[N - 1]; }
+	constexpr const_reference back() const noexcept { return _elems[N - 1]; }
+
+	constexpr pointer data() noexcept { return _elems; }
+	constexpr const_pointer data() const noexcept { return _elems; }
+
+	constexpr iterator begin() noexcept { return _elems; }
+	constexpr const_iterator begin() const noexcept { return _elems; }
+	constexpr const_iterator cbegin() const noexcept { return _elems; }
+
+	constexpr iterator end() noexcept { return _elems + N; }
+	constexpr const_iterator end() const noexcept { return _elems + N; }
+	constexpr const_iterator cend() const noexcept { return _elems + N; }
+
+	constexpr bool empty() const noexcept { return N == 0; }
+	constexpr size_type size() const noexcept { return N; }
+	constexpr size_type max_size() const noexcept { return N; }
+
+	void fill(const value_type &value)
+	{
+		for (size_type i = 0; i < N; ++i) {
+			_elems[i] = value;
+		}
+	}
+};
+
+template<typename T, size_t N>
+constexpr typename array<T, N>::iterator begin(array<T, N> &a) noexcept
+{
+	return a.begin();
+}
+
+template<typename T, size_t N>
+constexpr typename array<T, N>::const_iterator begin(const array<T, N> &a) noexcept
+{
+	return a.begin();
+}
+
+template<typename T, size_t N>
+constexpr typename array<T, N>::iterator end(array<T, N> &a) noexcept
+{
+	return a.end();
+}
+
+template<typename T, size_t N>
+constexpr typename array<T, N>::const_iterator end(const array<T, N> &a) noexcept
+{
+	return a.end();
+}
+
+}
