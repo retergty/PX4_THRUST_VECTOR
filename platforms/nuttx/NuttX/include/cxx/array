@@ -36,6 +36,7 @@
 #pragma once
 
 #include <cstddef>
+#include <utility>
 
 namespace std
 {
@@ -84,6 +85,13 @@ struct array
 			_elems[i] = value;
 		}
 	}
+
+	void swap(array &other)
+	{
+		for (size_type i = 0; i < N; ++i) {
+			std::swap(_elems[i], other._elems[i]);
+		}
+	}
 };
 
 template<typename T, size_t N>
@@ -108,6 +116,12 @@ template<typename T, size_t N>
 constexpr typename array<T, N>::const_iterator end(const array<T, N> &a) noexcept
 {
 	return a.end();
+}
+
+template<typename T, size_t N>
+void swap(array<T, N> &a, array<T, N> &b)
+{
+	a.swap(b);
 }
 
 }
