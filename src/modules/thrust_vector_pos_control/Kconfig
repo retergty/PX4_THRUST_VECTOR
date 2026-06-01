@@ -1,0 +1,12 @@
+menuconfig MODULES_THRUST_VECTOR_POS_CONTROL
+	bool "thrust_vector_mc_pos_control"
+	default n
+	---help---
+		Enable support for thrust_vector_pos_control
+
+menuconfig USER_THRUST_VECTOR_POS_CONTROL
+	bool "thrust_vector_pos_control running as userspace module"
+	default y
+	depends on BOARD_PROTECTED && MODULES_THRUST_VECTOR_CONTROL
+	---help---
+		Put thrust_vector_pos_control in userspace memory
