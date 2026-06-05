@@ -603,7 +603,7 @@ TEST_F(CollisionPreventionTest, jerkLimit)
 	orb_unadvertise(obstacle_distance_pub);
 
 	// AND: we now set max jerk to 0.1
-	param = param_handle(px4::params::MPC_JERK_MAX);
+	param = param_handle(px4::params::TRV_JERK_MAX);
 	value = 0.1; // 0.1 maximum jerk
 	param_set(param, &value);
 	cp.paramsChanged();

@@ -129,6 +129,6 @@ private:
 		(ParamFloat<px4::params::HTE_THR_RANGE>) _param_hte_thr_range,
 		(ParamFloat<px4::params::HTE_VXY_THR>) _param_hte_vxy_thr,
 		(ParamFloat<px4::params::HTE_VZ_THR>) _param_hte_vz_thr,
-		(ParamFloat<px4::params::MPC_THR_HOVER>) _param_mpc_thr_hover
+		(ParamFloat<px4::params::TRV_THR_HOVER>) _param_mpc_thr_hover
 	)
 };

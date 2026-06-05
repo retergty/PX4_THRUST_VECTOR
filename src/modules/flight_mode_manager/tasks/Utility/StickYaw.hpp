@@ -82,7 +82,7 @@ private:
 	float _yawspeed_constraint{INFINITY};
 
 	DEFINE_PARAMETERS(
-		(ParamFloat<px4::params::MPC_MAN_Y_MAX>) _param_mpc_man_y_max, ///< Maximum yaw speed with full stick deflection
-		(ParamFloat<px4::params::MPC_MAN_Y_TAU>) _param_mpc_man_y_tau ///< time constant for yaw speed filtering
+		(ParamFloat<px4::params::TRV_MAN_Y_MAX>) _param_mpc_man_y_max, ///< Maximum yaw speed with full stick deflection
+		(ParamFloat<px4::params::TRV_MAN_Y_TAU>) _param_mpc_man_y_tau ///< time constant for yaw speed filtering
 	)
 };

@@ -63,9 +63,9 @@ protected:
 	ManualVelocitySmoothingZ _smoothing; ///< Smoothing in z direction
 
 	DEFINE_PARAMETERS_CUSTOM_PARENT(FlightTaskManualAltitude,
-					(ParamFloat<px4::params::MPC_JERK_MAX>) _param_mpc_jerk_max,
-					(ParamFloat<px4::params::MPC_ACC_UP_MAX>) _param_mpc_acc_up_max,
-					(ParamFloat<px4::params::MPC_ACC_DOWN_MAX>) _param_mpc_acc_down_max
+					(ParamFloat<px4::params::TRV_JERK_MAX>) _param_mpc_jerk_max,
+					(ParamFloat<px4::params::TRV_ACC_UP_MAX>) _param_mpc_acc_up_max,
+					(ParamFloat<px4::params::TRV_ACC_DOWN_MAX>) _param_mpc_acc_down_max
 				       )
 
 private:

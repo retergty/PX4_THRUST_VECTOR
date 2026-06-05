@@ -144,6 +144,9 @@
                 "/opt/ros/humble/local/lib/python3.10/dist-packages"
         ],
         "[cpp]": {
-                "editor.defaultFormatter": "ms-vscode.cpptools"
+                "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
         },
+        "clangd.arguments": [
+        "--compile-commands-dir=${workspaceFolder}/build/hcl_hcl-v1_default" // 使用当前工作区目录拼接编译目录
+        ]
 }

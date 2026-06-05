@@ -244,8 +244,8 @@ protected:
 	landing_gear_s _gear{};
 
 	DEFINE_PARAMETERS_CUSTOM_PARENT(ModuleParams,
-					(ParamFloat<px4::params::MPC_XY_VEL_MAX>) _param_mpc_xy_vel_max,
-					(ParamFloat<px4::params::MPC_Z_VEL_MAX_DN>) _param_mpc_z_vel_max_dn,
-					(ParamFloat<px4::params::MPC_Z_VEL_MAX_UP>) _param_mpc_z_vel_max_up
+					(ParamFloat<px4::params::TRV_XY_VEL_MAX>) _param_mpc_xy_vel_max,
+					(ParamFloat<px4::params::TRV_Z_VEL_MAX_DN>) _param_mpc_z_vel_max_dn,
+					(ParamFloat<px4::params::TRV_Z_VEL_MAX_UP>) _param_mpc_z_vel_max_up
 				       )
 };

@@ -37,4 +37,4 @@ param set-default EKF2_OF_CTRL 1
 param set-default LPE_FUSION 242
 param set-default LPE_FAKE_ORIGIN 1
 
-param set-default MPC_ALT_MODE 2
+param set-default TRV_ALT_MODE 2

@@ -38,8 +38,8 @@ param set-default MC_YAWRATE_MAX 400
 param set-default MC_YAWRATE_P 0.12
 param set-default MC_YAW_P 4
 
-param set-default MPC_MANTHR_MIN 0
-param set-default MPC_MAN_TILT_MAX 60
+param set-default TRV_MANTHR_MIN 0
+param set-default TRV_MAN_TILT_MAX 60
 
 param set-default SYS_HAS_BARO 0
 param set-default SYS_HAS_MAG 0

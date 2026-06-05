@@ -136,17 +136,17 @@ private:
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::MC_ORBIT_RAD_MAX>) _param_mc_orbit_rad_max,
 		(ParamInt<px4::params::MC_ORBIT_YAW_MOD>) _param_mc_orbit_yaw_mod,
-		(ParamFloat<px4::params::MPC_XY_CRUISE>) _param_mpc_xy_cruise, /**< cruise speed for circle approach */
-		(ParamFloat<px4::params::MPC_YAWRAUTO_MAX>) _param_mpc_yawrauto_max,
-		(ParamFloat<px4::params::MPC_XY_TRAJ_P>) _param_mpc_xy_traj_p,
+		(ParamFloat<px4::params::TRV_XY_CRUISE>) _param_mpc_xy_cruise, /**< cruise speed for circle approach */
+		(ParamFloat<px4::params::TRV_YAWRAUTO_MAX>) _param_mpc_yawrauto_max,
+		(ParamFloat<px4::params::TRV_XY_TRAJ_P>) _param_mpc_xy_traj_p,
 		(ParamFloat<px4::params::NAV_MC_ALT_RAD>)
 		_param_nav_mc_alt_rad, //vertical acceptance radius at which waypoints are updated
-		(ParamFloat<px4::params::MPC_XY_ERR_MAX>) _param_mpc_xy_err_max,
-		(ParamFloat<px4::params::MPC_ACC_HOR>) _param_mpc_acc_hor, // acceleration in flight
-		(ParamFloat<px4::params::MPC_JERK_AUTO>) _param_mpc_jerk_auto,
-		(ParamFloat<px4::params::MPC_ACC_UP_MAX>) _param_mpc_acc_up_max,
-		(ParamFloat<px4::params::MPC_ACC_DOWN_MAX>) _param_mpc_acc_down_max,
-		(ParamFloat<px4::params::MPC_Z_V_AUTO_UP>) _param_mpc_z_v_auto_up,
-		(ParamFloat<px4::params::MPC_Z_V_AUTO_DN>) _param_mpc_z_v_auto_dn
+		(ParamFloat<px4::params::TRV_XY_ERR_MAX>) _param_mpc_xy_err_max,
+		(ParamFloat<px4::params::TRV_ACC_HOR>) _param_mpc_acc_hor, // acceleration in flight
+		(ParamFloat<px4::params::TRV_JERK_AUTO>) _param_mpc_jerk_auto,
+		(ParamFloat<px4::params::TRV_ACC_UP_MAX>) _param_mpc_acc_up_max,
+		(ParamFloat<px4::params::TRV_ACC_DOWN_MAX>) _param_mpc_acc_down_max,
+		(ParamFloat<px4::params::TRV_Z_V_AUTO_UP>) _param_mpc_z_v_auto_up,
+		(ParamFloat<px4::params::TRV_Z_V_AUTO_DN>) _param_mpc_z_v_auto_dn
 	)
 };

@@ -40,12 +40,12 @@ param set-default MC_ROLLRATE_D 0.002
 param set-default MC_ROLLRATE_P 0.07
 param set-default MC_YAW_P 3
 
-param set-default MPC_THR_HOVER 0.7
-param set-default MPC_Z_P 1.5
-param set-default MPC_Z_VEL_P_ACC 8
-param set-default MPC_Z_VEL_I_ACC 6
-param set-default MPC_HOLD_MAX_XY 0.1
-param set-default MPC_MAX_FLOW_HGT 3
+param set-default TRV_THR_HOVER 0.7
+param set-default TRV_Z_P 1.5
+param set-default TRV_Z_VEL_P_ACC 8
+param set-default TRV_Z_VEL_I_ACC 6
+param set-default TRV_HOLD_MAX_XY 0.1
+param set-default TRV_MAX_FLOW_HGT 3
 
 param set-default NAV_RCL_ACT 3
 

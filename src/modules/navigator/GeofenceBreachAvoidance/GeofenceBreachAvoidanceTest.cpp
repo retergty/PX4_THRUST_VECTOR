@@ -134,16 +134,16 @@ TEST_F(GeofenceBreachAvoidanceTest, generateLoiterPointForMultirotor)
 	Vector2d home_global(42.1, 8.2);
 	MapProjection ref{42.1, 8.2};
 
-	param_t param = param_handle(px4::params::MPC_ACC_HOR);
+	param_t param = param_handle(px4::params::TRV_ACC_HOR);
 
 	float value = 3;
 	param_set(param, &value);
 
-	param = param_handle(px4::params::MPC_ACC_HOR_MAX);
+	param = param_handle(px4::params::TRV_ACC_HOR_MAX);
 	value = 5;
 	param_set(param, &value);
 
-	param = param_handle(px4::params::MPC_JERK_AUTO);
+	param = param_handle(px4::params::TRV_JERK_AUTO);
 	value = 8;
 	param_set(param, &value);
 

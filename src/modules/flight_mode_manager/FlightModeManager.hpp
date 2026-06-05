@@ -154,6 +154,6 @@ private:
 	uORB::Publication<vehicle_constraints_s> _vehicle_constraints_pub{ORB_ID(vehicle_constraints)};
 
 	DEFINE_PARAMETERS(
-		(ParamInt<px4::params::MPC_POS_MODE>) _param_mpc_pos_mode
+		(ParamInt<px4::params::TRV_POS_MODE>) _param_mpc_pos_mode
 	);
 };

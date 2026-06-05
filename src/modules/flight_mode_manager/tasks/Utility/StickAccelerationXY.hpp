@@ -90,10 +90,10 @@ private:
 	float _current_velocity_constraint{INFINITY};
 
 	DEFINE_PARAMETERS(
-		(ParamFloat<px4::params::MPC_VEL_MANUAL>) _param_mpc_vel_manual,
-		(ParamFloat<px4::params::MPC_VEL_MAN_SIDE>) _param_mpc_vel_man_side,
-		(ParamFloat<px4::params::MPC_VEL_MAN_BACK>) _param_mpc_vel_man_back,
-		(ParamFloat<px4::params::MPC_ACC_HOR>) _param_mpc_acc_hor,
-		(ParamFloat<px4::params::MPC_JERK_MAX>) _param_mpc_jerk_max
+		(ParamFloat<px4::params::TRV_VEL_MANUAL>) _param_mpc_vel_manual,
+		(ParamFloat<px4::params::TRV_VEL_MAN_SIDE>) _param_mpc_vel_man_side,
+		(ParamFloat<px4::params::TRV_VEL_MAN_BACK>) _param_mpc_vel_man_back,
+		(ParamFloat<px4::params::TRV_ACC_HOR>) _param_mpc_acc_hor,
+		(ParamFloat<px4::params::TRV_JERK_MAX>) _param_mpc_jerk_max
 	)
 };
