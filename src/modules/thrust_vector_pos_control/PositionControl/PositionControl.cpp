@@ -37,6 +37,7 @@
 
 #include "PositionControl.hpp"
 
+#include <drivers/drv_hrt.h>
 #include <float.h>
 #include <geo/geo.h>
 #include <mathlib/mathlib.h>
@@ -44,7 +45,7 @@
 
 #include "ControlMath.hpp"
 #include "matrix/Matrix.hpp"
-
+#include "matrix/Vector3.hpp"
 using namespace matrix;
 
 const trajectory_setpoint_s PositionControl::empty_trajectory_setpoint = {
@@ -56,18 +57,22 @@ PositionControl::PositionControl() {
       ilqr_settings.ocpSettings;
   ocp_settings.Q.setZero();
   ocp_settings.Q.template topLeftCorner<3, 3>().setIdentity();
+  ocp_settings.R = float(1e-1) * decltype(ocp_settings.R)::Identity();
   ocp_settings.Qf.setZero();
   ocp_settings.Qf.template topLeftCorner<3, 3>() =
-      float(10.0) * Matrix<float, 3, 3>::Identity();
-  ocp_settings.weight = 1;
-  ocp_settings.mass = 2.1;
+      float(10.0) * matrix::Matrix<float, 3, 3>::Identity();
+  ocp_settings.weight = 5;
 
   DDPSettings<float>& ddp_settings = ilqr_settings.ddpSettings;
 
-  ddp_settings.timeStep_ = 0.01;
-  ddp_settings.maxNumIterations_ = 3;
+  ddp_settings.timeStep = kTimeStep;
+  ddp_settings.maxNumIterations = 3;
 
-  _ilqr = new thrust_vector::ThrustVectorILQR<float, 15>(ilqr_settings);
+  _ilqr =
+      new thrust_vector::ThrustVectorILQR<float, kPredictLength>(ilqr_settings);
+
+  _state.setZero();
+  _input.setZero();
 }
 
 void PositionControl::setVelocityLimits(const float vel_horizontal,
@@ -96,26 +101,23 @@ void PositionControl::updateHoverThrust(const float hover_thrust_new) {
   // hover thrust by the new one. T' = T => a_sp' * Th' / g - Th' = a_sp * Th /
   // g - Th so a_sp' = (a_sp - g) * Th / Th' + g we can then add a_sp' - a_sp to
   // the current integrator to absorb the effect of changing Th by Th'
-  const float previous_hover_thrust = _hover_thrust;
   setHoverThrust(hover_thrust_new);
-
-  _vel_int(2) +=
-      (_acc_sp(2) - CONSTANTS_ONE_G) * previous_hover_thrust / _hover_thrust +
-      CONSTANTS_ONE_G - _acc_sp(2);
 }
 
 void PositionControl::setState(const PositionControlStates& states) {
+  _time = states.time;
   _pos = states.position;
   _vel = states.velocity;
   _yaw = states.yaw;
 }
 
 void PositionControl::setInputSetpoint(const trajectory_setpoint_s& setpoint) {
-  _timestamp_sp = setpoint.timestamp / 1e6f;
   _pos_sp = Vector3f(setpoint.position);
   _vel_sp = Vector3f(setpoint.velocity);
+  _acc_sp = Vector3f(setpoint.acceleration);
   _yaw_sp = setpoint.yaw;
   _yawspeed_sp = setpoint.yawspeed;
+  // std::cout << "pos_sp: " << _pos_sp.transpose() << std::endl;
 }
 
 void PositionControl::setPitchSetpoint(const float pitch_sp) {
@@ -131,7 +133,7 @@ bool PositionControl::update(const float dt) {
 
   if (valid) {
     _positionControl();
-    _velocityControl(dt);
+    _velocityControl();
 
     _yawspeed_sp = PX4_ISFINITE(_yawspeed_sp) ? _yawspeed_sp : 0.f;
     _yaw_sp = PX4_ISFINITE(_yaw_sp)
@@ -146,15 +148,14 @@ bool PositionControl::update(const float dt) {
 void PositionControl::_positionControl() {
   // P-position controller
   Vector3f vel_sp_position = (_pos_sp - _pos).emult(_gain_pos_p);
-  // Position and feed-forward velocity setpoints or position states being NAN
-  // results in them not having an influence
+  //  Position and feed-forward velocity setpoints or position states being NAN
+  //  results in them not having an influence
   ControlMath::addIfNotNanVector3f(_vel_sp, vel_sp_position);
   // make sure there are no NAN elements for further reference while
   // constraining
   ControlMath::setZeroIfNanVector3f(vel_sp_position);
-
-  // Constrain horizontal velocity by prioritizing the velocity component along
-  // the the desired position setpoint over the feed-forward term.
+  //  Constrain horizontal velocity by prioritizing the velocity component along
+  //  the the desired position setpoint over the feed-forward term.
   _vel_sp.xy() = ControlMath::constrainXY(vel_sp_position.xy(),
                                           (_vel_sp - vel_sp_position).xy(),
                                           _lim_vel_horizontal);
@@ -162,99 +163,29 @@ void PositionControl::_positionControl() {
   _vel_sp(2) = math::constrain(_vel_sp(2), -_lim_vel_up, _lim_vel_down);
 }
 
-void PositionControl::_velocityControl(const float dt) {
-  // Constrain vertical velocity integral
+void PositionControl::_velocityControl() {
+  if (_vel_sp.isAllFinite() && _vel.isAllFinite()) {
+    _ilqr->setDesireTrajectory(_time, _vel_sp, _input);
+    _state.template head<3>() = _vel;
+    _state.template tail<3>() = _input;
+    _ilqr->solver().run(_time, _state);
 
-  //_ilqr->solver().run(_timestamp_sp, const StateVector_t &initState);
-  // PID velocity control
-  Vector3f acc_sp_velocity =
-      vel_error.emult(_gain_vel_p) + _vel_int - _vel_dot.emult(_gain_vel_d);
-
-  // No control input from setpoints or corresponding states which are NAN
-  ControlMath::addIfNotNanVector3f(_acc_sp, acc_sp_velocity);
-
+    const auto& primalSolution = _ilqr->solver().primalSolution();
+    // const auto& performence = _ilqr->solver().performanceIndex();
+    // std::cout << "iLQR time: " << _time << " cost: " << performence.cost
+    // << std::endl;
+    _input = primalSolution.inputTrajectory_.front();
+    ControlMath::addIfNotNanVector3f(_acc_sp, _input);
+  }
   _accelerationControl();
-
-  // Integrator anti-windup in vertical direction
-  if ((_thr_sp(2) >= -_lim_thr_min && vel_error(2) >= 0.f) ||
-      (_thr_sp(2) <= -_lim_thr_max && vel_error(2) <= 0.f)) {
-    vel_error(2) = 0.f;
-  }
-
-  // Prioritize vertical control while keeping a horizontal margin
-  const Vector2f thrust_sp_xy(_thr_sp);
-  const float thrust_sp_xy_norm = thrust_sp_xy.norm();
-  const float thrust_max_squared = math::sq(_lim_thr_max);
-
-  // Determine how much vertical thrust is left keeping horizontal margin
-  const float allocated_horizontal_thrust =
-      math::min(thrust_sp_xy_norm, _lim_thr_xy_margin);
-  const float thrust_z_max_squared =
-      thrust_max_squared - math::sq(allocated_horizontal_thrust);
-
-  // Saturate maximal vertical thrust
-  _thr_sp(2) = math::max(_thr_sp(2), -sqrtf(thrust_z_max_squared));
-
-  // Determine how much horizontal thrust is left after prioritizing vertical
-  // control
-  const float thrust_max_xy_squared = thrust_max_squared - math::sq(_thr_sp(2));
-  float thrust_max_xy = 0.f;
-
-  if (thrust_max_xy_squared > 0.f) {
-    thrust_max_xy = sqrtf(thrust_max_xy_squared);
-  }
-
-  // Saturate thrust in horizontal direction
-  if (thrust_sp_xy_norm > thrust_max_xy) {
-    _thr_sp.xy() = thrust_sp_xy / thrust_sp_xy_norm * thrust_max_xy;
-  }
-
-  // Use tracking Anti-Windup for horizontal direction: during saturation, the
-  // integrator is used to unsaturate the output see Anti-Reset Windup for PID
-  // controllers, L.Rundqwist, 1990
-  const Vector2f acc_sp_xy_produced =
-      Vector2f(_thr_sp) * (CONSTANTS_ONE_G / _hover_thrust);
-
-  // The produced acceleration can be greater or smaller than the desired
-  // acceleration due to the saturations and the actual vertical thrust
-  // (computed independently). The ARW loop needs to run if the signal is
-  // saturated only.
-  if (_acc_sp.xy().norm_squared() > acc_sp_xy_produced.norm_squared()) {
-    const float arw_gain = 2.f / _gain_vel_p(0);
-    const Vector2f acc_sp_xy = _acc_sp.xy();
-
-    vel_error.xy() =
-        Vector2f(vel_error) - arw_gain * (acc_sp_xy - acc_sp_xy_produced);
-  }
-
-  // Make sure integral doesn't get NAN
-  ControlMath::setZeroIfNanVector3f(vel_error);
-  // Update integral part of velocity control
-  _vel_int += vel_error.emult(_gain_vel_i) * dt;
 }
 
 void PositionControl::_accelerationControl() {
-  // Assume standard acceleration due to gravity in vertical direction for
-  // attitude generation
-  float z_specific_force = -CONSTANTS_ONE_G;
+  matrix::Vector3f acc_thr_sp = _acc_sp;
+  acc_thr_sp(2) += -CONSTANTS_ONE_G;
 
-  if (!_decouple_horizontal_and_vertical_acceleration) {
-    // Include vertical acceleration setpoint for better horizontal acceleration
-    // tracking
-    z_specific_force += _acc_sp(2);
-  }
-
-  Vector3f body_z =
-      Vector3f(-_acc_sp(0), -_acc_sp(1), -z_specific_force).normalized();
-  ControlMath::limitTilt(body_z, Vector3f(0, 0, 1), _lim_tilt);
-  // Convert to thrust assuming hover thrust produces standard gravity
-  const float thrust_ned_z =
-      _acc_sp(2) * (_hover_thrust / CONSTANTS_ONE_G) - _hover_thrust;
-  // Project thrust to planned body attitude
-  const float cos_ned_body = (Vector3f(0, 0, 1).dot(body_z));
-  const float collective_thrust =
-      math::min(thrust_ned_z / cos_ned_body, -_lim_thr_min);
-  _thr_sp = body_z * collective_thrust;
+  _thr_sp = acc_thr_sp * (_hover_thrust / CONSTANTS_ONE_G);
+  _thr_sp(2) = math::min(_thr_sp(2), -_lim_thr_min);
 }
 
 bool PositionControl::_inputValid() {
@@ -278,13 +209,12 @@ bool PositionControl::_inputValid() {
     }
 
     if (PX4_ISFINITE(_vel_sp(i))) {
-      valid = valid && PX4_ISFINITE(_vel(i)) && PX4_ISFINITE(_vel_dot(i));
+      valid = valid && PX4_ISFINITE(_vel(i));
     }
   }
 
   return valid;
 }
-
 void PositionControl::getLocalPositionSetpoint(
     vehicle_local_position_setpoint_s& local_position_setpoint) const {
   local_position_setpoint.x = _pos_sp(0);
@@ -313,4 +243,8 @@ void PositionControl::getAttitudeSetpoint(
   }
 
   attitude_setpoint.yaw_sp_move_rate = _yawspeed_sp;
+  //   std::cout << "thrust_body: " << attitude_setpoint.thrust_body[0] << " "
+  //   << attitude_setpoint.thrust_body[1] << " " <<
+  //   attitude_setpoint.thrust_body[2]
+  //   << " " << std::endl;
 }

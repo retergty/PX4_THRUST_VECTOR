@@ -219,13 +219,6 @@ void ThrustVectorPositionControl::parameters_update(bool force) {
 
     _control.setPositionGains(Vector3f(
         _param_trv_xy_p.get(), _param_trv_xy_p.get(), _param_trv_z_p.get()));
-    _control.setVelocityGains(
-        Vector3f(_param_trv_xy_vel_p_acc.get(), _param_trv_xy_vel_p_acc.get(),
-                 _param_trv_z_vel_p_acc.get()),
-        Vector3f(_param_trv_xy_vel_i_acc.get(), _param_trv_xy_vel_i_acc.get(),
-                 _param_trv_z_vel_i_acc.get()),
-        Vector3f(_param_trv_xy_vel_d_acc.get(), _param_trv_xy_vel_d_acc.get(),
-                 _param_trv_z_vel_d_acc.get()));
     _control.setHorizontalThrustMargin(_param_trv_thr_xy_marg.get());
     _control.decoupleHorizontalAndVecticalAcceleration(
         _param_trv_acc_decouple.get());
@@ -355,6 +348,8 @@ void ThrustVectorPositionControl::parameters_update(bool force) {
 PositionControlStates ThrustVectorPositionControl::set_vehicle_states(
     const vehicle_local_position_s& vehicle_local_position, const float dt_s) {
   PositionControlStates states;
+
+  states.time = vehicle_local_position.timestamp * 1e-6f;
 
   const Vector2f position_xy(vehicle_local_position.x,
                              vehicle_local_position.y);
@@ -581,9 +576,6 @@ void ThrustVectorPositionControl::Run() {
         Vector3f(0.f, 0.f, 100.f)
             .copyTo(_setpoint.acceleration);  // High downwards acceleration to
                                               // make sure there's no thrust
-
-        // prevent any integrator windup
-        _control.resetIntegral();
       }
 
       // limit tilt during takeoff ramupup
@@ -657,15 +649,6 @@ void ThrustVectorPositionControl::Run() {
                              vehicle_local_position.vz * (1.f - weighting);
       }
 
-      if ((!PX4_ISFINITE(_setpoint.velocity[0]) ||
-           !PX4_ISFINITE(_setpoint.velocity[1])) &&
-          (!PX4_ISFINITE(_setpoint.position[0]) ||
-           !PX4_ISFINITE(_setpoint.position[1]))) {
-        // Horizontal velocity is not controlled, reset the integrators to avoid
-        // over-corrections when starting again.
-        _control.resetIntegralXY();
-      }
-
       _control.setState(states);
 
       // Run position control
@@ -702,7 +685,6 @@ void ThrustVectorPositionControl::Run() {
       _takeoff.updateTakeoffState(
           _vehicle_control_mode.flag_armed, _vehicle_land_detected.landed,
           false, 10.f, true, vehicle_local_position.timestamp_sample);
-      _control.resetIntegral();
     }
 
     // Publish takeoff status

@@ -50,8 +50,10 @@
 
 #include "ThrustVector.hpp"
 #include "iLQR/DDPSetting.hpp"
+#include "matrix/Vector3.hpp"
 
 struct PositionControlStates {
+  float time;
   matrix::Vector3f position;
   matrix::Vector3f velocity;
   matrix::Vector3f acceleration;
@@ -81,6 +83,8 @@ struct PositionControlStates {
  */
 class PositionControl {
  public:
+  static constexpr size_t kPredictLength = 15;
+  static constexpr float kTimeStep = 1.f / 125.f;
   PositionControl();
   ~PositionControl() { delete _ilqr; }
 
@@ -180,13 +184,6 @@ class PositionControl {
   bool update(const float dt);
 
   /**
-   * Set the integral term in xy to 0.
-   * @see _vel_int
-   */
-  void resetIntegral() { _vel_int.setZero(); }
-  void resetIntegralXY() { _vel_int.xy() = matrix::Vector2f(); }
-
-  /**
    * If set, the tilt setpoint is computed by assuming no vertical acceleration
    */
   void decoupleHorizontalAndVecticalAcceleration(bool val) {
@@ -225,9 +222,9 @@ class PositionControl {
 
   bool _inputValid();
 
-  void _positionControl();                ///< Position proportional control
-  void _velocityControl(const float dt);  ///< Velocity PID control
-  void _accelerationControl();            ///< Acceleration setpoint processing
+  void _positionControl();  ///< Position proportional control
+  void _velocityControl();
+  void _accelerationControl();  ///< Acceleration setpoint processing
 
   // Gains
   matrix::Vector3f _gain_pos_p;  ///< Position control proportional gain
@@ -256,12 +253,12 @@ class PositionControl {
               ///< the tilt setpoint
 
   // States
-  matrix::Vector3f _pos;     /**< current position */
-  matrix::Vector3f _vel;     /**< current velocity */
-  float _yaw{};              /**< current heading */
+  float _time;           /** setpoint time in s */
+  matrix::Vector3f _pos; /**< current position */
+  matrix::Vector3f _vel; /**< current velocity */
+  float _yaw{};          /**< current heading */
 
   // Setpoints
-  float _timestamp_sp;    /** setpoint timestamp in s */
   matrix::Vector3f _pos_sp; /**< desired position */
   matrix::Vector3f _vel_sp; /**< desired velocity */
   matrix::Vector3f _acc_sp; /**< desired acceleration */
@@ -270,8 +267,9 @@ class PositionControl {
   float _yawspeed_sp{};     /** desired yaw-speed */
   float _roll_sp{NAN};      /**< desired roll */
   float _pitch_sp{NAN};     /**< desired pitch */
-  matrix::Matrix3f _att_sp; /**< desired attitude setpoint,  */
 
+  matrix::Vector<float, 6> _state;
+  matrix::Vector<float, 3> _input;
   thrust_vector::ThrustVectorILQRSettings<float> ilqr_settings;
-  thrust_vector::ThrustVectorILQR<float, 15>* _ilqr{nullptr};
+  thrust_vector::ThrustVectorILQR<float, kPredictLength>* _ilqr{nullptr};
 };

@@ -148,5 +148,6 @@
         },
         "clangd.arguments": [
         "--compile-commands-dir=${workspaceFolder}/build/hcl_hcl-v1_default" // 使用当前工作区目录拼接编译目录
-        ]
+        ],
+        "ROS2.distro": "humble"
 }

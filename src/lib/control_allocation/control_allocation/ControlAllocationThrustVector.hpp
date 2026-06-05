@@ -2,7 +2,7 @@
 
 #include "ControlAllocation.hpp"
 //#include <quad_prog/QuadProg.hpp>
-#include <quad_prog/QuadProgNew.hpp>
+#include <quad_prog/QuadProg.hpp>
 
 #include <px4_platform_common/module_params.h>
 
@@ -63,18 +63,14 @@ protected:
 	 */
 	void updateQPState();
 private:
-	bool isThrustSetpointUpdated(const matrix::Vector<float, 6> control_sp) const;
-
 	void computeMainQpSetpoint(const matrix::Vector<float, 12> &force_vector);
 	matrix::Vector<float, 12> computeActuatorSetpoint() const;
-
-	inline matrix::Dcmf calculateThrustVectorRotationMatrix(const int unit_index);
 
 	inline void updateMainQpSolver();
 private:
 	ParamHandles _param_handles[4];
 
-	QuadProgNew<float, 12, 6, 8> _main_qp;
+	QuadProg<float, 12, 6, 8> _main_qp;
 
 	//DiagnoalMatrix<float, 12> _G;
 	matrix::Vector<float, NUM_ACTUATORS> _safe_actuator_sp;  	///< Actuator setpoint

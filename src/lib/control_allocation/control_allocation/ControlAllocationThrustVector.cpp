@@ -41,7 +41,6 @@
 
 #include "ControlAllocationThrustVector.hpp"
 #include <px4_platform_common/module.h>
-
 ControlAllocationThrustVector::ControlAllocationThrustVector()
 {
 	for (int i = 0; i < 4; ++i) {
@@ -59,6 +58,7 @@ ControlAllocationThrustVector::ControlAllocationThrustVector()
 
 		snprintf(buffer, sizeof(buffer), "CA_ROTOR%u_CT", i);
 		_param_handles[i].thrust_coef = param_find(buffer);
+		param_get(_param_handles[i].thrust_coef,&_thrust_vector_unit_geometry[i].thrust_coef);
 	}
 }
 
@@ -286,9 +286,16 @@ ControlAllocationThrustVector::allocate()
 
 	_prev_actuator_sp = _actuator_sp;
 
-	_control_sp(0) *= 4.5f;
-	_control_sp(1) *= 4.5f;
-	_control_sp(2) *= 3.5f;
+	// _control_sp(0) *= 2.5f;
+	// _control_sp(1) *= 2.5f;
+	// _control_sp(2) *= 2.0f;
+	// _control_sp(3) *= 50.f;
+	// _control_sp(4) *= 50.f;
+	// _control_sp(5) *= 50.f;
+
+	_control_sp(0) *= 2.5f;
+	_control_sp(1) *= 2.5f;
+	_control_sp(2) *= 1.0f;
 	_control_sp(3) *= 50.f;
 	_control_sp(4) *= 50.f;
 	_control_sp(5) *= 50.f;
