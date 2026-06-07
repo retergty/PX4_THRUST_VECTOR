@@ -85,14 +85,14 @@ void ThrustVectorPositionControl::parameters_update(bool force) {
     float sample_freq_hz = 1.f / _sample_interval_s.mean();
 
     // velocity notch filter
-    if ((_param_trv_vel_nf_frq.get() > 0.f) &&
-        (_param_trv_vel_nf_bw.get() > 0.f)) {
+    if ((_param_mpc_vel_nf_frq.get() > 0.f) &&
+        (_param_mpc_vel_nf_bw.get() > 0.f)) {
       _vel_xy_notch_filter.setParameters(sample_freq_hz,
-                                         _param_trv_vel_nf_frq.get(),
-                                         _param_trv_vel_nf_bw.get());
+                                         _param_mpc_vel_nf_frq.get(),
+                                         _param_mpc_vel_nf_bw.get());
       _vel_z_notch_filter.setParameters(sample_freq_hz,
-                                        _param_trv_vel_nf_frq.get(),
-                                        _param_trv_vel_nf_bw.get());
+                                        _param_mpc_vel_nf_frq.get(),
+                                        _param_mpc_vel_nf_bw.get());
 
     } else {
       _vel_xy_notch_filter.disable();
@@ -100,9 +100,9 @@ void ThrustVectorPositionControl::parameters_update(bool force) {
     }
 
     // velocity xy/z low pass filter
-    if (_param_trv_vel_lp.get() > 0.f) {
-      _vel_xy_lp_filter.setCutoffFreq(sample_freq_hz, _param_trv_vel_lp.get());
-      _vel_z_lp_filter.setCutoffFreq(sample_freq_hz, _param_trv_vel_lp.get());
+    if (_param_mpc_vel_lp.get() > 0.f) {
+      _vel_xy_lp_filter.setCutoffFreq(sample_freq_hz, _param_mpc_vel_lp.get());
+      _vel_z_lp_filter.setCutoffFreq(sample_freq_hz, _param_mpc_vel_lp.get());
 
     } else {
       // disable filtering
@@ -111,11 +111,11 @@ void ThrustVectorPositionControl::parameters_update(bool force) {
     }
 
     // velocity derivative xy/z low pass filter
-    if (_param_trv_veld_lp.get() > 0.f) {
+    if (_param_mpc_veld_lp.get() > 0.f) {
       _vel_deriv_xy_lp_filter.setCutoffFreq(sample_freq_hz,
-                                            _param_trv_veld_lp.get());
+                                            _param_mpc_veld_lp.get());
       _vel_deriv_z_lp_filter.setCutoffFreq(sample_freq_hz,
-                                           _param_trv_veld_lp.get());
+                                           _param_mpc_veld_lp.get());
 
     } else {
       // disable filtering
@@ -125,77 +125,77 @@ void ThrustVectorPositionControl::parameters_update(bool force) {
 
     int num_changed = 0;
 
-    if (_param_trv_vehicle_resp.get() >= 0.f) {
+    if (_param_mpc_vehicle_resp.get() >= 0.f) {
       // make it less sensitive at the lower end
       float responsiveness =
-          _param_trv_vehicle_resp.get() * _param_trv_vehicle_resp.get();
+          _param_mpc_vehicle_resp.get() * _param_mpc_vehicle_resp.get();
 
-      num_changed += _param_trv_acc_hor.commit_no_notification(
+      num_changed += _param_mpc_acc_hor.commit_no_notification(
           math::lerp(1.f, 15.f, responsiveness));
-      num_changed += _param_trv_acc_hor_max.commit_no_notification(
+      num_changed += _param_mpc_acc_hor_max.commit_no_notification(
           math::lerp(2.f, 15.f, responsiveness));
-      num_changed += _param_trv_man_y_max.commit_no_notification(
+      num_changed += _param_mpc_man_y_max.commit_no_notification(
           math::lerp(80.f, 450.f, responsiveness));
 
       if (responsiveness > 0.6f) {
-        num_changed += _param_trv_man_y_tau.commit_no_notification(0.f);
+        num_changed += _param_mpc_man_y_tau.commit_no_notification(0.f);
 
       } else {
-        num_changed += _param_trv_man_y_tau.commit_no_notification(
+        num_changed += _param_mpc_man_y_tau.commit_no_notification(
             math::lerp(0.5f, 0.f, responsiveness / 0.6f));
       }
 
       if (responsiveness < 0.5f) {
-        num_changed += _param_trv_tiltmax_air.commit_no_notification(45.f);
+        num_changed += _param_mpc_tiltmax_air.commit_no_notification(45.f);
 
       } else {
-        num_changed += _param_trv_tiltmax_air.commit_no_notification(
+        num_changed += _param_mpc_tiltmax_air.commit_no_notification(
             math::min(MAX_SAFE_TILT_DEG,
                       math::lerp(45.f, 70.f, (responsiveness - 0.5f) * 2.f)));
       }
 
-      num_changed += _param_trv_acc_down_max.commit_no_notification(
+      num_changed += _param_mpc_acc_down_max.commit_no_notification(
           math::lerp(0.8f, 15.f, responsiveness));
-      num_changed += _param_trv_acc_up_max.commit_no_notification(
+      num_changed += _param_mpc_acc_up_max.commit_no_notification(
           math::lerp(1.f, 15.f, responsiveness));
-      num_changed += _param_trv_jerk_max.commit_no_notification(
+      num_changed += _param_mpc_jerk_max.commit_no_notification(
           math::lerp(2.f, 50.f, responsiveness));
-      num_changed += _param_trv_jerk_auto.commit_no_notification(
+      num_changed += _param_mpc_jerk_auto.commit_no_notification(
           math::lerp(1.f, 25.f, responsiveness));
     }
 
-    if (_param_trv_xy_vel_all.get() >= 0.f) {
-      float xy_vel = _param_trv_xy_vel_all.get();
-      num_changed += _param_trv_vel_manual.commit_no_notification(xy_vel);
-      num_changed += _param_trv_vel_man_back.commit_no_notification(-1.f);
-      num_changed += _param_trv_vel_man_side.commit_no_notification(-1.f);
-      num_changed += _param_trv_xy_cruise.commit_no_notification(xy_vel);
-      num_changed += _param_trv_xy_vel_max.commit_no_notification(xy_vel);
+    if (_param_mpc_xy_vel_all.get() >= 0.f) {
+      float xy_vel = _param_mpc_xy_vel_all.get();
+      num_changed += _param_mpc_vel_manual.commit_no_notification(xy_vel);
+      num_changed += _param_mpc_vel_man_back.commit_no_notification(-1.f);
+      num_changed += _param_mpc_vel_man_side.commit_no_notification(-1.f);
+      num_changed += _param_mpc_xy_cruise.commit_no_notification(xy_vel);
+      num_changed += _param_mpc_xy_vel_max.commit_no_notification(xy_vel);
     }
 
-    if (_param_trv_z_vel_all.get() >= 0.f) {
-      float z_vel = _param_trv_z_vel_all.get();
-      num_changed += _param_trv_z_v_auto_up.commit_no_notification(z_vel);
-      num_changed += _param_trv_z_vel_max_up.commit_no_notification(z_vel);
+    if (_param_mpc_z_vel_all.get() >= 0.f) {
+      float z_vel = _param_mpc_z_vel_all.get();
+      num_changed += _param_mpc_z_v_auto_up.commit_no_notification(z_vel);
+      num_changed += _param_mpc_z_vel_max_up.commit_no_notification(z_vel);
       num_changed +=
-          _param_trv_z_v_auto_dn.commit_no_notification(z_vel * 0.75f);
+          _param_mpc_z_v_auto_dn.commit_no_notification(z_vel * 0.75f);
       num_changed +=
-          _param_trv_z_vel_max_dn.commit_no_notification(z_vel * 0.75f);
-      num_changed += _param_trv_tko_speed.commit_no_notification(z_vel * 0.6f);
-      num_changed += _param_trv_land_speed.commit_no_notification(z_vel * 0.5f);
+          _param_mpc_z_vel_max_dn.commit_no_notification(z_vel * 0.75f);
+      num_changed += _param_mpc_tko_speed.commit_no_notification(z_vel * 0.6f);
+      num_changed += _param_mpc_land_speed.commit_no_notification(z_vel * 0.5f);
     }
 
     if (num_changed > 0) {
       param_notify_changes();
     }
 
-    if (_param_trv_tiltmax_air.get() > MAX_SAFE_TILT_DEG) {
-      _param_trv_tiltmax_air.set(MAX_SAFE_TILT_DEG);
-      _param_trv_tiltmax_air.commit();
+    if (_param_mpc_tiltmax_air.get() > MAX_SAFE_TILT_DEG) {
+      _param_mpc_tiltmax_air.set(MAX_SAFE_TILT_DEG);
+      _param_mpc_tiltmax_air.commit();
       mavlink_log_critical(&_mavlink_log_pub,
                            "Tilt constrained to safe value\t");
       /* EVENT
-       * @description <param>TRV_TILTMAX_AIR</param> is set to {1:.0}.
+       * @description <param>MPC_TILTMAX_AIR</param> is set to {1:.0}.
        */
       events::send<float>(
           events::ID("trv_pos_ctrl_tilt_set"), events::Log::Warning,
@@ -203,145 +203,145 @@ void ThrustVectorPositionControl::parameters_update(bool force) {
           MAX_SAFE_TILT_DEG);
     }
 
-    if (_param_trv_tiltmax_lnd.get() > _param_trv_tiltmax_air.get()) {
-      _param_trv_tiltmax_lnd.set(_param_trv_tiltmax_air.get());
-      _param_trv_tiltmax_lnd.commit();
+    if (_param_mpc_tiltmax_lnd.get() > _param_mpc_tiltmax_air.get()) {
+      _param_mpc_tiltmax_lnd.set(_param_mpc_tiltmax_air.get());
+      _param_mpc_tiltmax_lnd.commit();
       mavlink_log_critical(&_mavlink_log_pub,
                            "Land tilt has been constrained by max tilt\t");
       /* EVENT
-       * @description <param>TRV_TILTMAX_LND</param> is set to {1:.0}.
+       * @description <param>MPC_TILTMAX_LND</param> is set to {1:.0}.
        */
       events::send<float>(
           events::ID("trv_pos_ctrl_land_tilt_set"), events::Log::Warning,
           "Land tilt limit has been constrained by maximum tilt",
-          _param_trv_tiltmax_air.get());
+          _param_mpc_tiltmax_air.get());
     }
 
     _control.setPositionGains(Vector3f(
-        _param_trv_xy_p.get(), _param_trv_xy_p.get(), _param_trv_z_p.get()));
-    _control.setHorizontalThrustMargin(_param_trv_thr_xy_marg.get());
+        _param_mpc_xy_p.get(), _param_mpc_xy_p.get(), _param_mpc_z_p.get()));
+    _control.setHorizontalThrustMargin(_param_mpc_thr_xy_marg.get());
     _control.decoupleHorizontalAndVecticalAcceleration(
-        _param_trv_acc_decouple.get());
+        _param_mpc_acc_decouple.get());
 
     // Check that the design parameters are inside the absolute maximum
     // constraints
-    if (_param_trv_xy_cruise.get() > _param_trv_xy_vel_max.get()) {
-      _param_trv_xy_cruise.set(_param_trv_xy_vel_max.get());
-      _param_trv_xy_cruise.commit();
+    if (_param_mpc_xy_cruise.get() > _param_mpc_xy_vel_max.get()) {
+      _param_mpc_xy_cruise.set(_param_mpc_xy_vel_max.get());
+      _param_mpc_xy_cruise.commit();
       mavlink_log_critical(&_mavlink_log_pub,
                            "Cruise speed has been constrained by max speed\t");
       /* EVENT
-       * @description <param>TRV_XY_CRUISE</param> is set to {1:.0}.
+       * @description <param>MPC_XY_CRUISE</param> is set to {1:.0}.
        */
       events::send<float>(events::ID("trv_pos_ctrl_cruise_set"),
                           events::Log::Warning,
                           "Cruise speed has been constrained by maximum speed",
-                          _param_trv_xy_vel_max.get());
+                          _param_mpc_xy_vel_max.get());
     }
 
-    if (_param_trv_vel_manual.get() > _param_trv_xy_vel_max.get()) {
-      _param_trv_vel_manual.set(_param_trv_xy_vel_max.get());
-      _param_trv_vel_manual.commit();
+    if (_param_mpc_vel_manual.get() > _param_mpc_xy_vel_max.get()) {
+      _param_mpc_vel_manual.set(_param_mpc_xy_vel_max.get());
+      _param_mpc_vel_manual.commit();
       mavlink_log_critical(&_mavlink_log_pub,
                            "Manual speed has been constrained by max speed\t");
       /* EVENT
-       * @description <param>TRV_VEL_MANUAL</param> is set to {1:.0}.
+       * @description <param>MPC_VEL_MANUAL</param> is set to {1:.0}.
        */
       events::send<float>(events::ID("trv_pos_ctrl_man_vel_set"),
                           events::Log::Warning,
                           "Manual speed has been constrained by maximum speed",
-                          _param_trv_xy_vel_max.get());
+                          _param_mpc_xy_vel_max.get());
     }
 
-    if (_param_trv_vel_man_back.get() > _param_trv_vel_manual.get()) {
-      _param_trv_vel_man_back.set(_param_trv_vel_manual.get());
-      _param_trv_vel_man_back.commit();
+    if (_param_mpc_vel_man_back.get() > _param_mpc_vel_manual.get()) {
+      _param_mpc_vel_man_back.set(_param_mpc_vel_manual.get());
+      _param_mpc_vel_man_back.commit();
       mavlink_log_critical(
           &_mavlink_log_pub,
           "Manual backward speed has been constrained by forward speed\t");
       /* EVENT
-       * @description <param>TRV_VEL_MAN_BACK</param> is set to {1:.0}.
+       * @description <param>MPC_VEL_MAN_BACK</param> is set to {1:.0}.
        */
       events::send<float>(
           events::ID("trv_pos_ctrl_man_vel_back_set"), events::Log::Warning,
           "Manual backward speed has been constrained by forward speed",
-          _param_trv_vel_manual.get());
+          _param_mpc_vel_manual.get());
     }
 
-    if (_param_trv_vel_man_side.get() > _param_trv_vel_manual.get()) {
-      _param_trv_vel_man_side.set(_param_trv_vel_manual.get());
-      _param_trv_vel_man_side.commit();
+    if (_param_mpc_vel_man_side.get() > _param_mpc_vel_manual.get()) {
+      _param_mpc_vel_man_side.set(_param_mpc_vel_manual.get());
+      _param_mpc_vel_man_side.commit();
       mavlink_log_critical(
           &_mavlink_log_pub,
           "Manual sideways speed has been constrained by forward speed\t");
       /* EVENT
-       * @description <param>TRV_VEL_MAN_SIDE</param> is set to {1:.0}.
+       * @description <param>MPC_VEL_MAN_SIDE</param> is set to {1:.0}.
        */
       events::send<float>(
           events::ID("trv_pos_ctrl_man_vel_side_set"), events::Log::Warning,
           "Manual sideways speed has been constrained by forward speed",
-          _param_trv_vel_manual.get());
+          _param_mpc_vel_manual.get());
     }
 
-    if (_param_trv_z_v_auto_up.get() > _param_trv_z_vel_max_up.get()) {
-      _param_trv_z_v_auto_up.set(_param_trv_z_vel_max_up.get());
-      _param_trv_z_v_auto_up.commit();
+    if (_param_mpc_z_v_auto_up.get() > _param_mpc_z_vel_max_up.get()) {
+      _param_mpc_z_v_auto_up.set(_param_mpc_z_vel_max_up.get());
+      _param_mpc_z_v_auto_up.commit();
       mavlink_log_critical(&_mavlink_log_pub,
                            "Ascent speed has been constrained by max speed\t");
       /* EVENT
-       * @description <param>TRV_Z_V_AUTO_UP</param> is set to {1:.0}.
+       * @description <param>MPC_Z_V_AUTO_UP</param> is set to {1:.0}.
        */
       events::send<float>(events::ID("trv_pos_ctrl_up_vel_set"),
                           events::Log::Warning,
                           "Ascent speed has been constrained by max speed",
-                          _param_trv_z_vel_max_up.get());
+                          _param_mpc_z_vel_max_up.get());
     }
 
-    if (_param_trv_z_v_auto_dn.get() > _param_trv_z_vel_max_dn.get()) {
-      _param_trv_z_v_auto_dn.set(_param_trv_z_vel_max_dn.get());
-      _param_trv_z_v_auto_dn.commit();
+    if (_param_mpc_z_v_auto_dn.get() > _param_mpc_z_vel_max_dn.get()) {
+      _param_mpc_z_v_auto_dn.set(_param_mpc_z_vel_max_dn.get());
+      _param_mpc_z_v_auto_dn.commit();
       mavlink_log_critical(&_mavlink_log_pub,
                            "Descent speed has been constrained by max speed\t");
       /* EVENT
-       * @description <param>TRV_Z_V_AUTO_DN</param> is set to {1:.0}.
+       * @description <param>MPC_Z_V_AUTO_DN</param> is set to {1:.0}.
        */
       events::send<float>(events::ID("trv_pos_ctrl_down_vel_set"),
                           events::Log::Warning,
                           "Descent speed has been constrained by max speed",
-                          _param_trv_z_vel_max_dn.get());
+                          _param_mpc_z_vel_max_dn.get());
     }
 
-    if (_param_trv_thr_hover.get() > _param_trv_thr_max.get() ||
-        _param_trv_thr_hover.get() < _param_trv_thr_min.get()) {
-      _param_trv_thr_hover.set(math::constrain(_param_trv_thr_hover.get(),
-                                               _param_trv_thr_min.get(),
-                                               _param_trv_thr_max.get()));
-      _param_trv_thr_hover.commit();
+    if (_param_mpc_thr_hover.get() > _param_mpc_thr_max.get() ||
+        _param_mpc_thr_hover.get() < _param_mpc_thr_min.get()) {
+      _param_mpc_thr_hover.set(math::constrain(_param_mpc_thr_hover.get(),
+                                               _param_mpc_thr_min.get(),
+                                               _param_mpc_thr_max.get()));
+      _param_mpc_thr_hover.commit();
       mavlink_log_critical(&_mavlink_log_pub,
                            "Hover thrust has been constrained by min/max\t");
       /* EVENT
-       * @description <param>TRV_THR_HOVER</param> is set to {1:.0}.
+       * @description <param>MPC_THR_HOVER</param> is set to {1:.0}.
        */
       events::send<float>(events::ID("trv_pos_ctrl_hover_thrust_set"),
                           events::Log::Warning,
                           "Hover thrust has been constrained by min/max thrust",
-                          _param_trv_thr_hover.get());
+                          _param_mpc_thr_hover.get());
     }
 
-    if (!_param_trv_use_hte.get() || !_hover_thrust_initialized) {
-      _control.setHoverThrust(_param_trv_thr_hover.get());
+    if (!_param_mpc_use_hte.get() || !_hover_thrust_initialized) {
+      _control.setHoverThrust(_param_mpc_thr_hover.get());
       _hover_thrust_initialized = true;
     }
 
     // initialize vectors from params and enforce constraints
-    _param_trv_tko_speed.set(
-        math::min(_param_trv_tko_speed.get(), _param_trv_z_vel_max_up.get()));
-    _param_trv_land_speed.set(
-        math::min(_param_trv_land_speed.get(), _param_trv_z_vel_max_dn.get()));
+    _param_mpc_tko_speed.set(
+        math::min(_param_mpc_tko_speed.get(), _param_mpc_z_vel_max_up.get()));
+    _param_mpc_land_speed.set(
+        math::min(_param_mpc_land_speed.get(), _param_mpc_z_vel_max_dn.get()));
 
     _takeoff.setSpoolupTime(_param_com_spoolup_time.get());
-    _takeoff.setTakeoffRampTime(_param_trv_tko_ramp_t.get());
-    _takeoff.generateInitialRampValue(_param_trv_z_vel_p_acc.get());
+    _takeoff.setTakeoffRampTime(_param_mpc_tko_ramp_t.get());
+    _takeoff.generateInitialRampValue(_param_mpc_z_vel_p_acc.get());
   }
 }
 
@@ -465,7 +465,7 @@ void ThrustVectorPositionControl::Run() {
 
     _vehicle_land_detected_sub.update(&_vehicle_land_detected);
 
-    if (_param_trv_use_hte.get()) {
+    if (_param_mpc_use_hte.get()) {
       hover_thrust_estimate_s hte;
 
       if (_hover_thrust_estimate_sub.update(&hte)) {
@@ -516,8 +516,8 @@ void ThrustVectorPositionControl::Run() {
       // TODO: this should get obsolete once the takeoff limiting moves into the
       // flight tasks
       if (!PX4_ISFINITE(_vehicle_constraints.speed_up) ||
-          (_vehicle_constraints.speed_up > _param_trv_z_vel_max_up.get())) {
-        _vehicle_constraints.speed_up = _param_trv_z_vel_max_up.get();
+          (_vehicle_constraints.speed_up > _param_mpc_z_vel_max_up.get())) {
+        _vehicle_constraints.speed_up = _param_mpc_z_vel_max_up.get();
       }
 
       if (_vehicle_control_mode.flag_control_offboard_enabled) {
@@ -542,8 +542,8 @@ void ThrustVectorPositionControl::Run() {
         }
 
         // override with defaults
-        _vehicle_constraints.speed_up = _param_trv_z_vel_max_up.get();
-        _vehicle_constraints.speed_down = _param_trv_z_vel_max_dn.get();
+        _vehicle_constraints.speed_up = _param_mpc_z_vel_max_up.get();
+        _vehicle_constraints.speed_down = _param_mpc_z_vel_max_dn.get();
       }
 
       bool skip_takeoff = _param_com_throw_en.get();
@@ -560,7 +560,7 @@ void ThrustVectorPositionControl::Run() {
           (flying && _vehicle_land_detected.ground_contact);
 
       if (!flying) {
-        _control.setHoverThrust(_param_trv_thr_hover.get());
+        _control.setHoverThrust(_param_mpc_thr_hover.get());
       }
 
       // make sure takeoff ramp is not amended by acceleration feed-forward
@@ -581,24 +581,24 @@ void ThrustVectorPositionControl::Run() {
       // limit tilt during takeoff ramupup
       const float tilt_limit_deg =
           (_takeoff.getTakeoffState() < TakeoffState::flight)
-              ? _param_trv_tiltmax_lnd.get()
-              : _param_trv_tiltmax_air.get();
+              ? _param_mpc_tiltmax_lnd.get()
+              : _param_mpc_tiltmax_air.get();
       _control.setTiltLimit(
           _tilt_limit_slew_rate.update(math::radians(tilt_limit_deg), dt));
 
       const float speed_up =
           _takeoff.updateRamp(dt, PX4_ISFINITE(_vehicle_constraints.speed_up)
                                       ? _vehicle_constraints.speed_up
-                                      : _param_trv_z_vel_max_up.get());
+                                      : _param_mpc_z_vel_max_up.get());
       const float speed_down = PX4_ISFINITE(_vehicle_constraints.speed_down)
                                    ? _vehicle_constraints.speed_down
-                                   : _param_trv_z_vel_max_dn.get();
+                                   : _param_mpc_z_vel_max_dn.get();
 
       // Allow ramping from zero thrust on takeoff
-      const float minimum_thrust = flying ? _param_trv_thr_min.get() : 0.f;
-      _control.setThrustLimits(minimum_thrust, _param_trv_thr_max.get());
+      const float minimum_thrust = flying ? _param_mpc_thr_min.get() : 0.f;
+      _control.setThrustLimits(minimum_thrust, _param_mpc_thr_max.get());
 
-      float max_speed_xy = _param_trv_xy_vel_max.get();
+      float max_speed_xy = _param_mpc_xy_vel_max.get();
 
       if (PX4_ISFINITE(vehicle_local_position.vxy_max)) {
         max_speed_xy = math::min(max_speed_xy, vehicle_local_position.vxy_max);
@@ -607,7 +607,7 @@ void ThrustVectorPositionControl::Run() {
       _control.setVelocityLimits(
           max_speed_xy,
           math::min(speed_up,
-                    _param_trv_z_vel_max_up.get()),  // takeoff ramp starts with
+                    _param_mpc_z_vel_max_up.get()),  // takeoff ramp starts with
                                                      // negative velocity limit
           math::max(speed_down, 0.f));
 
@@ -641,10 +641,10 @@ void ThrustVectorPositionControl::Run() {
         // Set velocity to the derivative of position
         // because it has less bias but blend it in across the landing speed
         // range
-        //  <  TRV_LAND_SPEED: ramp up using altitude derivative without a step
-        //  >= TRV_LAND_SPEED: use altitude derivative
+        //  <  MPC_LAND_SPEED: ramp up using altitude derivative without a step
+        //  >= MPC_LAND_SPEED: use altitude derivative
         float weighting = fminf(
-            fabsf(_setpoint.velocity[2]) / _param_trv_land_speed.get(), 1.f);
+            fabsf(_setpoint.velocity[2]) / _param_mpc_land_speed.get(), 1.f);
         states.velocity(2) = vehicle_local_position.z_deriv * weighting +
                              vehicle_local_position.vz * (1.f - weighting);
       }
@@ -658,9 +658,9 @@ void ThrustVectorPositionControl::Run() {
 
         _control.setInputSetpoint(generateFailsafeSetpoint(
             vehicle_local_position.timestamp_sample, states, true));
-        _control.setVelocityLimits(_param_trv_xy_vel_max.get(),
-                                   _param_trv_z_vel_max_up.get(),
-                                   _param_trv_z_vel_max_dn.get());
+        _control.setVelocityLimits(_param_mpc_xy_vel_max.get(),
+                                   _param_mpc_z_vel_max_up.get(),
+                                   _param_mpc_z_vel_max_dn.get());
         _control.update(dt);
       }
 
@@ -729,7 +729,7 @@ trajectory_setpoint_s ThrustVectorPositionControl::generateFailsafeSetpoint(
   } else {
     // descend with land speed since we can't stop
     failsafe_setpoint.acceleration[0] = failsafe_setpoint.acceleration[1] = 0.f;
-    failsafe_setpoint.velocity[2] = _param_trv_land_speed.get();
+    failsafe_setpoint.velocity[2] = _param_mpc_land_speed.get();
 
     if (warn) {
       PX4_WARN("Failsafe: blind land");

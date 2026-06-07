@@ -46,15 +46,15 @@
  * @value 4 Acceleration based
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_INT32(TRV_POS_MODE, 4);
+PARAM_DEFINE_INT32(MPC_POS_MODE, 4);
 
 /**
  * Maximum horizontal velocity setpoint in Position mode
  *
- * Must be smaller than TRV_XY_VEL_MAX.
+ * Must be smaller than MPC_XY_VEL_MAX.
  *
  * The maximum sideways and backward speed can be set differently
- * using TRV_VEL_MAN_SIDE and TRV_VEL_MAN_BACK, respectively.
+ * using MPC_VEL_MAN_SIDE and MPC_VEL_MAN_BACK, respectively.
  *
  * @unit m/s
  * @min 3
@@ -63,13 +63,13 @@ PARAM_DEFINE_INT32(TRV_POS_MODE, 4);
  * @decimal 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_VEL_MANUAL, 10.f);
+PARAM_DEFINE_FLOAT(MPC_VEL_MANUAL, 10.f);
 
 /**
  * Maximum sideways velocity in Position mode
  *
  * If set to a negative value or larger than
- * TRV_VEL_MANUAL then TRV_VEL_MANUAL is used.
+ * MPC_VEL_MANUAL then MPC_VEL_MANUAL is used.
  *
  * @unit m/s
  * @min -1
@@ -78,13 +78,13 @@ PARAM_DEFINE_FLOAT(TRV_VEL_MANUAL, 10.f);
  * @decimal 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_VEL_MAN_SIDE, -1.f);
+PARAM_DEFINE_FLOAT(MPC_VEL_MAN_SIDE, -1.f);
 
 /**
  * Maximum backward velocity in Position mode
  *
  * If set to a negative value or larger than
- * TRV_VEL_MANUAL then TRV_VEL_MANUAL is used.
+ * MPC_VEL_MANUAL then MPC_VEL_MANUAL is used.
  *
  * @unit m/s
  * @min -1
@@ -93,14 +93,14 @@ PARAM_DEFINE_FLOAT(TRV_VEL_MAN_SIDE, -1.f);
  * @decimal 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_VEL_MAN_BACK, -1.f);
+PARAM_DEFINE_FLOAT(MPC_VEL_MAN_BACK, -1.f);
 
 /**
  * Maximum horizontal acceleration
  *
- * TRV_POS_MODE
+ * MPC_POS_MODE
  * 1 just deceleration
- * 4 not used, use TRV_ACC_HOR instead
+ * 4 not used, use MPC_ACC_HOR instead
  *
  * @unit m/s^2
  * @min 2
@@ -109,7 +109,7 @@ PARAM_DEFINE_FLOAT(TRV_VEL_MAN_BACK, -1.f);
  * @decimal 2
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_ACC_HOR_MAX, 5.f);
+PARAM_DEFINE_FLOAT(MPC_ACC_HOR_MAX, 5.f);
 
 /**
  * Maximum horizontal and vertical jerk in Position/Altitude mode
@@ -119,7 +119,7 @@ PARAM_DEFINE_FLOAT(TRV_ACC_HOR_MAX, 5.f);
  *
  * Setting this to the maximum value essentially disables the limit.
  *
- * Only used with TRV_POS_MODE Acceleration based.
+ * Only used with MPC_POS_MODE Acceleration based.
  *
  * @unit m/s^3
  * @min 0.5
@@ -128,7 +128,7 @@ PARAM_DEFINE_FLOAT(TRV_ACC_HOR_MAX, 5.f);
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_JERK_MAX, 8.f);
+PARAM_DEFINE_FLOAT(MPC_JERK_MAX, 8.f);
 
 /**
  * Deadzone for sticks in manual piloted modes
@@ -141,7 +141,7 @@ PARAM_DEFINE_FLOAT(TRV_JERK_MAX, 8.f);
  * @increment 0.01
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_HOLD_DZ, 0.1f);
+PARAM_DEFINE_FLOAT(MPC_HOLD_DZ, 0.1f);
 
 /**
  * Manual position control stick exponential curve sensitivity
@@ -158,7 +158,7 @@ PARAM_DEFINE_FLOAT(TRV_HOLD_DZ, 0.1f);
  * @increment 0.01
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_XY_MAN_EXPO, 0.6f);
+PARAM_DEFINE_FLOAT(MPC_XY_MAN_EXPO, 0.6f);
 
 /**
  * Manual control stick vertical exponential curve
@@ -175,7 +175,7 @@ PARAM_DEFINE_FLOAT(TRV_XY_MAN_EXPO, 0.6f);
  * @increment 0.01
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_Z_MAN_EXPO, 0.6f);
+PARAM_DEFINE_FLOAT(MPC_Z_MAN_EXPO, 0.6f);
 
 /**
  * Manual control stick yaw rotation exponential curve
@@ -192,4 +192,4 @@ PARAM_DEFINE_FLOAT(TRV_Z_MAN_EXPO, 0.6f);
  * @increment 0.01
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_YAW_EXPO, 0.6f);
+PARAM_DEFINE_FLOAT(MPC_YAW_EXPO, 0.6f);

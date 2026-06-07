@@ -83,7 +83,7 @@ struct PositionControlStates {
  */
 class PositionControl {
  public:
-  static constexpr size_t kPredictLength = 15;
+  static constexpr size_t kPredictLength = 30;
   static constexpr float kTimeStep = 1.f / 125.f;
   PositionControl();
   ~PositionControl() { delete _ilqr; }

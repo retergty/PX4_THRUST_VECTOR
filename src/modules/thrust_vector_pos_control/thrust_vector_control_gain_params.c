@@ -42,7 +42,7 @@
  * @increment 0.1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_Z_P, 1.f);
+PARAM_DEFINE_FLOAT(MPC_Z_P, 1.f);
 
 /**
  * Proportional gain for horizontal position error
@@ -55,7 +55,7 @@ PARAM_DEFINE_FLOAT(TRV_Z_P, 1.f);
  * @increment 0.1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_XY_P, 0.95f);
+PARAM_DEFINE_FLOAT(MPC_XY_P, 0.95f);
 
 /**
  * Proportional gain for vertical velocity error
@@ -68,7 +68,7 @@ PARAM_DEFINE_FLOAT(TRV_XY_P, 0.95f);
  * @increment 0.1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_Z_VEL_P_ACC, 4.f);
+PARAM_DEFINE_FLOAT(MPC_Z_VEL_P_ACC, 4.f);
 
 /**
  * Proportional gain for horizontal velocity error
@@ -81,7 +81,7 @@ PARAM_DEFINE_FLOAT(TRV_Z_VEL_P_ACC, 4.f);
  * @increment 0.1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_XY_VEL_P_ACC, 1.8f);
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_P_ACC, 1.8f);
 
 /**
  * Integral gain for vertical velocity error
@@ -94,7 +94,7 @@ PARAM_DEFINE_FLOAT(TRV_XY_VEL_P_ACC, 1.8f);
  * @increment 0.1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_Z_VEL_I_ACC, 2.f);
+PARAM_DEFINE_FLOAT(MPC_Z_VEL_I_ACC, 2.f);
 
 /**
  * Integral gain for horizontal velocity error
@@ -108,7 +108,7 @@ PARAM_DEFINE_FLOAT(TRV_Z_VEL_I_ACC, 2.f);
  * @increment 0.02
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_XY_VEL_I_ACC, 0.4f);
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_I_ACC, 0.4f);
 
 /**
  * Differential gain for vertical velocity error
@@ -121,7 +121,7 @@ PARAM_DEFINE_FLOAT(TRV_XY_VEL_I_ACC, 0.4f);
  * @increment 0.02
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_Z_VEL_D_ACC, 0.f);
+PARAM_DEFINE_FLOAT(MPC_Z_VEL_D_ACC, 0.f);
 
 /**
  * Differential gain for horizontal velocity error
@@ -134,4 +134,4 @@ PARAM_DEFINE_FLOAT(TRV_Z_VEL_D_ACC, 0.f);
  * @increment 0.02
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_XY_VEL_D_ACC, 0.2f);
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_D_ACC, 0.2f);

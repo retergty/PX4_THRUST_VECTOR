@@ -43,12 +43,12 @@
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_XY_CRUISE, 5.f);
+PARAM_DEFINE_FLOAT(MPC_XY_CRUISE, 5.f);
 
 /**
  * Ascent velocity in autonomous modes
  *
- * For manually controlled modes and offboard see TRV_Z_VEL_MAX_UP
+ * For manually controlled modes and offboard see MPC_Z_VEL_MAX_UP
  *
  * @unit m/s
  * @min 0.5
@@ -57,12 +57,12 @@ PARAM_DEFINE_FLOAT(TRV_XY_CRUISE, 5.f);
  * @increment 0.5
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_Z_V_AUTO_UP, 3.f);
+PARAM_DEFINE_FLOAT(MPC_Z_V_AUTO_UP, 3.f);
 
 /**
  * Descent velocity in autonomous modes
  *
- * For manual modes and offboard, see TRV_Z_VEL_MAX_DN
+ * For manual modes and offboard, see MPC_Z_VEL_MAX_DN
  *
  * @unit m/s
  * @min 0.5
@@ -71,12 +71,12 @@ PARAM_DEFINE_FLOAT(TRV_Z_V_AUTO_UP, 3.f);
  * @increment 0.5
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_Z_V_AUTO_DN, 1.5f);
+PARAM_DEFINE_FLOAT(MPC_Z_V_AUTO_DN, 1.5f);
 
 /**
  * Acceleration for autonomous and for manual modes
  *
- * When piloting manually, this parameter is only used in TRV_POS_MODE Acceleration based.
+ * When piloting manually, this parameter is only used in MPC_POS_MODE Acceleration based.
  *
  * @unit m/s^2
  * @min 2
@@ -85,7 +85,7 @@ PARAM_DEFINE_FLOAT(TRV_Z_V_AUTO_DN, 1.5f);
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_ACC_HOR, 3.f);
+PARAM_DEFINE_FLOAT(MPC_ACC_HOR, 3.f);
 
 /**
  * Jerk limit in autonomous modes
@@ -100,7 +100,7 @@ PARAM_DEFINE_FLOAT(TRV_ACC_HOR, 3.f);
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_JERK_AUTO, 4.f);
+PARAM_DEFINE_FLOAT(MPC_JERK_AUTO, 4.f);
 
 /**
  * Proportional gain for horizontal trajectory position error
@@ -111,7 +111,7 @@ PARAM_DEFINE_FLOAT(TRV_JERK_AUTO, 4.f);
  * @increment 0.1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_XY_TRAJ_P, 0.5f);
+PARAM_DEFINE_FLOAT(MPC_XY_TRAJ_P, 0.5f);
 
 /**
  * Maximum horizontal error allowed by the trajectory generator
@@ -130,7 +130,7 @@ PARAM_DEFINE_FLOAT(TRV_XY_TRAJ_P, 0.5f);
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_XY_ERR_MAX, 2.f);
+PARAM_DEFINE_FLOAT(MPC_XY_ERR_MAX, 2.f);
 
 /**
  * Maximum yaw rate in autonomous modes
@@ -145,7 +145,7 @@ PARAM_DEFINE_FLOAT(TRV_XY_ERR_MAX, 2.f);
  * @increment 5
  * @group Multicopter Attitude Control
  */
-PARAM_DEFINE_FLOAT(TRV_YAWRAUTO_MAX, 45.f);
+PARAM_DEFINE_FLOAT(MPC_YAWRAUTO_MAX, 45.f);
 
 /**
  * Maximum yaw acceleration in autonomous modes
@@ -160,7 +160,7 @@ PARAM_DEFINE_FLOAT(TRV_YAWRAUTO_MAX, 45.f);
  * @increment 5
  * @group Multicopter Attitude Control
  */
-PARAM_DEFINE_FLOAT(TRV_YAWRAUTO_ACC, 60.f);
+PARAM_DEFINE_FLOAT(MPC_YAWRAUTO_ACC, 60.f);
 
 /**
  * Heading behavior in autonomous modes
@@ -175,4 +175,4 @@ PARAM_DEFINE_FLOAT(TRV_YAWRAUTO_ACC, 60.f);
  * @value 5 yaw fixed
  * @group Mission
  */
-PARAM_DEFINE_INT32(TRV_YAW_MODE, 0);
+PARAM_DEFINE_INT32(MPC_YAW_MODE, 0);

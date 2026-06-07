@@ -30,7 +30,7 @@ param set-default SENS_EN_ARSPDSIM 1
 param set-default EKF2_GPS_DELAY 0
 
 param set-default VT_TYPE 2
-param set-default TRV_MAN_Y_MAX 60
+param set-default MPC_MAN_Y_MAX 60
 param set-default MC_PITCH_P 5
 
 param set-default CA_AIRFRAME 2

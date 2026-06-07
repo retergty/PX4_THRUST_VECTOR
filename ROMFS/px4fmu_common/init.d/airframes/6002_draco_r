@@ -37,15 +37,15 @@ param set-default MC_YAWRATE_MAX 700
 ###############################################
 # Multirotor Position Gains
 ###############################################
-param set-default TRV_ACC_HOR 8
-param set-default TRV_THR_MIN 0.06
-param set-default TRV_THR_HOVER 0.3
+param set-default MPC_ACC_HOR 8
+param set-default MPC_THR_MIN 0.06
+param set-default MPC_THR_HOVER 0.3
 # altitude control gains
-param set-default TRV_Z_VEL_I_ACC 0.4
+param set-default MPC_Z_VEL_I_ACC 0.4
 # position control gains
 # etc gains
-param set-default TRV_TKO_RAMP_T 0.4
-param set-default TRV_VEL_MANUAL 5
+param set-default MPC_TKO_RAMP_T 0.4
+param set-default MPC_VEL_MANUAL 5
 
 # Filter settings
 param set-default IMU_DGYRO_CUTOFF 90

@@ -336,13 +336,13 @@ class Quaternion : public Vector4<Type> {
    * @param u 3D vector u
    */
   static Quaternion expq(const Vector3<Type>& u) {
-    const Type tol = Type(0.2);          // ensures an error < 10^-10
-    const Type c2 = Type(1.0 / 2.0);     // 1 / 2!
-    const Type c3 = Type(1.0 / 6.0);     // 1 / 3!
-    const Type c4 = Type(1.0 / 24.0);    // 1 / 4!
-    const Type c5 = Type(1.0 / 120.0);   // 1 / 5!
-    const Type c6 = Type(1.0 / 720.0);   // 1 / 6!
-    const Type c7 = Type(1.0 / 5040.0);  // 1 / 7!
+    constexpr Type tol = Type(0.2);                // ensures an error < 10^-10
+    constexpr Type c2 = Type(1.0) / Type(2.0);     // 1 / 2!
+    constexpr Type c3 = Type(1.0) / Type(6.0);     // 1 / 3!
+    constexpr Type c4 = Type(1.0) / Type(24.0);    // 1 / 4!
+    constexpr Type c5 = Type(1.0) / Type(120.0);   // 1 / 5!
+    constexpr Type c6 = Type(1.0) / Type(720.0);   // 1 / 6!
+    constexpr Type c7 = Type(1.0) / Type(5040.0);  // 1 / 7!
 
     Type u_norm = u.norm();
     Type sinc_u, cos_u;
@@ -385,7 +385,8 @@ class Quaternion : public Vector4<Type> {
     if (u_norm < tol) {  // result smaller than O(||.||^3)
       return Type(0.5) *
              (Dcm<Type>() + u_hat +
-              (Type(1.0 / 3.0) + u_norm * u_norm / Type(45.0)) * u_hat * u_hat);
+              (Type(1.0) / Type(3.0) + u_norm * u_norm / Type(45.0)) * u_hat *
+                  u_hat);
 
     } else {
       return Type(0.5) *

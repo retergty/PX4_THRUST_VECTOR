@@ -74,17 +74,17 @@ param set-default SIM_GZ_SV_MINA2 -90
 param set-default SIM_GZ_SV_MINA3 -90
 param set-default SIM_GZ_SV_MINA4 -90
 
-param set-default TRV_THR_HOVER 0.5
+param set-default MPC_THR_HOVER 0.5
 param set-default NAV_DLL_ACT 2
 
-param set-default TRV_Z_P 0.65
-param set-default TRV_XY_P 0.40
-param set-default TRV_Z_VEL_P_ACC 3.50
-param set-default TRV_Z_VEL_I_ACC 0.30
-param set-default TRV_Z_VEL_D_ACC 0.05
-param set-default TRV_XY_VEL_P_ACC 1.65
-param set-default TRV_XY_VEL_I_ACC 1.00
-param set-default TRV_XY_VEL_D_ACC 0.25
+param set-default MPC_Z_P 0.65
+param set-default MPC_XY_P 0.40
+param set-default MPC_Z_VEL_P_ACC 3.50
+param set-default MPC_Z_VEL_I_ACC 0.30
+param set-default MPC_Z_VEL_D_ACC 0.05
+param set-default MPC_XY_VEL_P_ACC 1.65
+param set-default MPC_XY_VEL_I_ACC 1.00
+param set-default MPC_XY_VEL_D_ACC 0.25
 
 param set-default MC_PITCH_P 1.50
 param set-default MC_ROLL_P 2.50

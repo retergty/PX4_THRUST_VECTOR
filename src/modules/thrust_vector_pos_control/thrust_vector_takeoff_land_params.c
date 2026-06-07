@@ -43,7 +43,7 @@
  * @max 5
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_TKO_RAMP_T, 3.f);
+PARAM_DEFINE_FLOAT(MPC_TKO_RAMP_T, 3.f);
 
 /**
  * Takeoff climb rate
@@ -54,14 +54,14 @@ PARAM_DEFINE_FLOAT(TRV_TKO_RAMP_T, 3.f);
  * @decimal 2
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_TKO_SPEED, 1.5f);
+PARAM_DEFINE_FLOAT(MPC_TKO_SPEED, 1.5f);
 
 /**
  * Altitude for 1. step of slow landing (descend)
  *
  * Below this altitude descending velocity gets limited to a value
- * between "TRV_Z_VEL_MAX_DN" (or "TRV_Z_V_AUTO_DN") and "TRV_LAND_SPEED"
- * Value needs to be higher than "TRV_LAND_ALT2"
+ * between "MPC_Z_VEL_MAX_DN" (or "MPC_Z_V_AUTO_DN") and "MPC_LAND_SPEED"
+ * Value needs to be higher than "MPC_LAND_ALT2"
  *
  * @unit m
  * @min 0
@@ -69,14 +69,14 @@ PARAM_DEFINE_FLOAT(TRV_TKO_SPEED, 1.5f);
  * @decimal 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_LAND_ALT1, 10.f);
+PARAM_DEFINE_FLOAT(MPC_LAND_ALT1, 10.f);
 
 /**
  * Altitude for 2. step of slow landing (landing)
  *
  * Below this altitude descending velocity gets
- * limited to "TRV_LAND_SPEED"
- * Value needs to be lower than "TRV_LAND_ALT1"
+ * limited to "MPC_LAND_SPEED"
+ * Value needs to be lower than "MPC_LAND_ALT1"
  *
  * @unit m
  * @min 0
@@ -84,13 +84,13 @@ PARAM_DEFINE_FLOAT(TRV_LAND_ALT1, 10.f);
  * @decimal 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_LAND_ALT2, 5.f);
+PARAM_DEFINE_FLOAT(MPC_LAND_ALT2, 5.f);
 
 /**
  * Altitude for 3. step of slow landing
  *
  * Below this altitude descending velocity gets
- * limited to "TRV_LAND_CRWL", if LIDAR available.
+ * limited to "MPC_LAND_CRWL", if LIDAR available.
  * No effect if LIDAR not available
  *
  * @unit m
@@ -99,7 +99,7 @@ PARAM_DEFINE_FLOAT(TRV_LAND_ALT2, 5.f);
  * @decimal 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_LAND_ALT3, 1.f);
+PARAM_DEFINE_FLOAT(MPC_LAND_ALT3, 1.f);
 
 /**
  * Landing descend rate
@@ -109,16 +109,16 @@ PARAM_DEFINE_FLOAT(TRV_LAND_ALT3, 1.f);
  * @decimal 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_LAND_SPEED, 0.7f);
+PARAM_DEFINE_FLOAT(MPC_LAND_SPEED, 0.7f);
 
 /**
  * Land crawl descend rate
  *
- * Used below TRV_LAND_ALT3 if distance sensor data is availabe.
+ * Used below MPC_LAND_ALT3 if distance sensor data is availabe.
  *
  * @unit m/s
  * @min 0.1
  * @decimal 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_LAND_CRWL, 0.3f);
+PARAM_DEFINE_FLOAT(MPC_LAND_CRWL, 0.3f);

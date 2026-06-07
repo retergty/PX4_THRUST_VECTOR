@@ -69,7 +69,7 @@ private:
 	AlphaFilter<matrix::Vector2f> _man_input_filter;
 
 	DEFINE_PARAMETERS(
-		(ParamFloat<px4::params::TRV_MAN_TILT_MAX>) _param_mpc_man_tilt_max, ///< maximum tilt allowed for manual flight
+		(ParamFloat<px4::params::MPC_MAN_TILT_MAX>) _param_mpc_man_tilt_max, ///< maximum tilt allowed for manual flight
 		(ParamFloat<px4::params::MC_MAN_TILT_TAU>) _param_mc_man_tilt_tau ///< time constant for stick filter
 	)
 };

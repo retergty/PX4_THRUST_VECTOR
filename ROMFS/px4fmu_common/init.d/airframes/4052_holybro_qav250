@@ -37,12 +37,12 @@ param set-default MC_YAWRATE_MAX 600
 param set-default MC_YAWRATE_P 0.25
 param set-default MC_YAW_P 4
 
-param set-default TRV_MANTHR_MIN 0
-param set-default TRV_MAN_TILT_MAX 60
-param set-default TRV_THR_CURVE 1
-param set-default TRV_THR_HOVER 0.25
-param set-default TRV_THR_MIN 0.05
-param set-default TRV_Z_VEL_I_ACC 1.7
+param set-default MPC_MANTHR_MIN 0
+param set-default MPC_MAN_TILT_MAX 60
+param set-default MPC_THR_CURVE 1
+param set-default MPC_THR_HOVER 0.25
+param set-default MPC_THR_MIN 0.05
+param set-default MPC_Z_VEL_I_ACC 1.7
 
 param set-default THR_MDL_FAC 0.3
 

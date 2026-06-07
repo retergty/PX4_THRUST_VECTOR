@@ -38,7 +38,7 @@ px4_add_library(ThrustVectorPositionControl
 	PositionControl.hpp
 )
 target_include_directories(ThrustVectorPositionControl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(ThrustVectorPositionControl PUBLIC iLQR)
+target_link_libraries(ThrustVectorPositionControl PUBLIC iLQR motion_planning)
 
 px4_add_unit_gtest(SRC ControlMathTest.cpp LINKLIBS ThrustVectorPositionControl)
 px4_add_unit_gtest(SRC PositionControlTest.cpp LINKLIBS ThrustVectorPositionControl)

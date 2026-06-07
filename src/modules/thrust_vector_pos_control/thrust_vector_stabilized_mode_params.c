@@ -41,7 +41,7 @@
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_MAN_TILT_MAX, 35.f);
+PARAM_DEFINE_FLOAT(MPC_MAN_TILT_MAX, 35.f);
 
 /**
  * Max manual yaw rate for Stabilized, Altitude, Position mode
@@ -53,7 +53,7 @@ PARAM_DEFINE_FLOAT(TRV_MAN_TILT_MAX, 35.f);
  * @increment 10
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_MAN_Y_MAX, 150.f);
+PARAM_DEFINE_FLOAT(MPC_MAN_Y_MAX, 150.f);
 
 /**
  * Minimum collective thrust in Stabilized mode
@@ -70,7 +70,7 @@ PARAM_DEFINE_FLOAT(TRV_MAN_Y_MAX, 150.f);
  * @increment 0.01
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_MANTHR_MIN, 0.08f);
+PARAM_DEFINE_FLOAT(MPC_MANTHR_MIN, 0.08f);
 
 /**
  * Thrust curve mapping in Stabilized Mode
@@ -78,16 +78,16 @@ PARAM_DEFINE_FLOAT(TRV_MANTHR_MIN, 0.08f);
  * Defines how the throttle stick is mapped to collective thrust in Stabilized mode.
  *
  * Rescale to hover thrust:
- *   Stick input is linearly rescaled, such that a centered stick corresponds to the hover throttle (see TRV_THR_HOVER).
+ *   Stick input is linearly rescaled, such that a centered stick corresponds to the hover throttle (see MPC_THR_HOVER).
  *
  * No Rescale:
  *   Directly map the stick 1:1 to the output.
  *   Can be useful with very low hover thrust which leads to much distortion and the upper half getting sensitive.
  *
- * With TRV_THR_HOVER 0.5 both modes are the same.
+ * With MPC_THR_HOVER 0.5 both modes are the same.
  *
  * @value 0 Rescale to hover thrust
  * @value 1 No Rescale
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_INT32(TRV_THR_CURVE, 0);
+PARAM_DEFINE_INT32(MPC_THR_CURVE, 0);

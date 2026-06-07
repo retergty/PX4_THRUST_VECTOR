@@ -34,8 +34,8 @@
 /**
  * Vertical thrust required to hover
  *
- * Mapped to center throttle stick in Stabilized mode (see TRV_THR_CURVE).
- * Used for initialization of the hover thrust estimator (see TRV_USE_HTE).
+ * Mapped to center throttle stick in Stabilized mode (see MPC_THR_CURVE).
+ * Used for initialization of the hover thrust estimator (see MPC_USE_HTE).
  * The estimated hover thrust is used as base for zero vertical acceleration in altitude control.
  * The hover thrust is important for land detection to work correctly.
  *
@@ -46,18 +46,18 @@
  * @increment 0.01
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_THR_HOVER, 0.5f);
+PARAM_DEFINE_FLOAT(MPC_THR_HOVER, 0.5f);
 
 /**
  * Hover thrust estimator
  *
- * Disable to use the fixed parameter TRV_THR_HOVER
+ * Disable to use the fixed parameter MPC_THR_HOVER
  * Enable to use the hover thrust estimator
  *
  * @boolean
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_INT32(TRV_USE_HTE, 1);
+PARAM_DEFINE_INT32(MPC_USE_HTE, 1);
 
 /**
  * Horizontal thrust margin
@@ -72,7 +72,7 @@ PARAM_DEFINE_INT32(TRV_USE_HTE, 1);
  * @increment 0.01
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_THR_XY_MARG, 0.3f);
+PARAM_DEFINE_FLOAT(MPC_THR_XY_MARG, 0.3f);
 
 /**
  * Velocity low pass cutoff frequency
@@ -86,7 +86,7 @@ PARAM_DEFINE_FLOAT(TRV_THR_XY_MARG, 0.3f);
  * @increment 0.5
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_VEL_LP, 0.0f);
+PARAM_DEFINE_FLOAT(MPC_VEL_LP, 0.0f);
 
 /**
  * Velocity notch filter frequency
@@ -101,7 +101,7 @@ PARAM_DEFINE_FLOAT(TRV_VEL_LP, 0.0f);
  * @increment 0.5
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_VEL_NF_FRQ, 0.0f);
+PARAM_DEFINE_FLOAT(MPC_VEL_NF_FRQ, 0.0f);
 
 /**
  * Velocity notch filter bandwidth
@@ -115,7 +115,7 @@ PARAM_DEFINE_FLOAT(TRV_VEL_NF_FRQ, 0.0f);
  * @increment 0.5
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_VEL_NF_BW, 5.0f);
+PARAM_DEFINE_FLOAT(MPC_VEL_NF_BW, 5.0f);
 
 /**
  * Velocity derivative low pass cutoff frequency
@@ -129,4 +129,4 @@ PARAM_DEFINE_FLOAT(TRV_VEL_NF_BW, 5.0f);
  * @increment 0.5
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_VELD_LP, 5.0f);
+PARAM_DEFINE_FLOAT(MPC_VELD_LP, 5.0f);

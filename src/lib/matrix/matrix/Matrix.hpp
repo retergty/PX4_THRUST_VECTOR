@@ -256,7 +256,7 @@ class Matrix {
   // Using this function reduces the number of temporary variables needed to
   // compute A * B.T
   template <int P>
-  Matrix<Type, M, M> multiplyByTranspose(
+  Matrix<Type, M, P> multiplyByTranspose(
       const Matrix<Type, P, N>& other) const {
     Matrix<Type, M, P> res;
     const Matrix<Type, M, N>& self = *this;
@@ -270,6 +270,40 @@ class Matrix {
     }
 
     return res;
+  }
+
+  // Compute A.T * B without constructing A.T.
+  template <int P>
+  Matrix<Type, N, P> transposeMultiply(const Matrix<Type, M, P>& other) const {
+    Matrix<Type, N, P> res{};
+    const Matrix<Type, M, N>& self = *this;
+
+    for (size_t i = 0; i < N; i++) {
+      for (size_t k = 0; k < P; k++) {
+        for (size_t j = 0; j < M; j++) {
+          res(i, k) += self(j, i) * other(j, k);
+        }
+      }
+    }
+
+    return res;
+  }
+
+  // Accumulate this += lhs.T * rhs without constructing lhs.T or lhs.T * rhs.
+  template <int LhsRows>
+  void addTransposeProduct(const Matrix<Type, LhsRows, M>& lhs,
+                           const Matrix<Type, LhsRows, N>& rhs) {
+    Matrix<Type, M, N>& self = *this;
+
+    for (size_t i = 0; i < M; i++) {
+      for (size_t k = 0; k < N; k++) {
+        Type sum = self(i, k);
+        for (size_t j = 0; j < LhsRows; j++) {
+          sum += lhs(j, i) * rhs(j, k);
+        }
+        self(i, k) = sum;
+      }
+    }
   }
 
   // Element-wise multiplication
@@ -439,11 +473,11 @@ class Matrix {
   }
 
   bool isApprox(const Matrix<Type, M, N>& other,
-                const Type eps = Type(1e-4f)) const {
+                const Type eps = Type(1e-4)) const {
     return isEqual(*this, other, eps);
   }
 
-  bool isZero(const Type eps = Type(1e-4f)) const {
+  bool isZero(const Type eps = Type(1e-4)) const {
     return isApprox(Matrix<Type, M, N>::Zero(), eps);
   }
 
@@ -829,7 +863,7 @@ Matrix<Type, M, N> operator*(Type scalar, const Matrix<Type, M, N>& other) {
 
 template <typename Type, int M, int N>
 bool isEqual(const Matrix<Type, M, N>& x, const Matrix<Type, M, N>& y,
-             const Type eps = Type(1e-4f)) {
+             const Type eps = Type(1e-4)) {
   for (size_t i = 0; i < M; i++) {
     for (size_t j = 0; j < N; j++) {
       if (!isEqualF(x(i, j), y(i, j), eps)) {

@@ -41,12 +41,12 @@ using Vector2d = matrix::Vector2<double>;
 GeofenceBreachAvoidance::GeofenceBreachAvoidance(ModuleParams *parent) :
 	ModuleParams(parent)
 {
-	_paramHandle.param_mpc_jerk_max = param_find("TRV_JERK_MAX");
-	_paramHandle.param_mpc_acc_hor = param_find("TRV_ACC_HOR");
-	_paramHandle.param_mpc_acc_hor_max = param_find("TRV_ACC_HOR_MAX");
-	_paramHandle.param_mpc_jerk_auto = param_find("TRV_JERK_AUTO");
-	_paramHandle.param_mpc_acc_up_max = param_find("TRV_ACC_UP_MAX");
-	_paramHandle.param_mpc_acc_down_max = param_find("TRV_ACC_DOWN_MAX");
+	_paramHandle.param_mpc_jerk_max = param_find("MPC_JERK_MAX");
+	_paramHandle.param_mpc_acc_hor = param_find("MPC_ACC_HOR");
+	_paramHandle.param_mpc_acc_hor_max = param_find("MPC_ACC_HOR_MAX");
+	_paramHandle.param_mpc_jerk_auto = param_find("MPC_JERK_AUTO");
+	_paramHandle.param_mpc_acc_up_max = param_find("MPC_ACC_UP_MAX");
+	_paramHandle.param_mpc_acc_down_max = param_find("MPC_ACC_DOWN_MAX");
 
 	updateParameters();
 }

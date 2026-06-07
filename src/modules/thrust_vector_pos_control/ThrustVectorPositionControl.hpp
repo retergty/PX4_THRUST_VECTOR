@@ -151,28 +151,28 @@ class ThrustVectorPositionControl
 
   DEFINE_PARAMETERS(
       // Position Control
-      (ParamFloat<px4::params::TRV_XY_P>)_param_trv_xy_p,
-      (ParamFloat<px4::params::TRV_Z_P>)_param_trv_z_p,
-      (ParamFloat<px4::params::TRV_XY_VEL_P_ACC>)_param_trv_xy_vel_p_acc,
-      (ParamFloat<px4::params::TRV_XY_VEL_I_ACC>)_param_trv_xy_vel_i_acc,
-      (ParamFloat<px4::params::TRV_XY_VEL_D_ACC>)_param_trv_xy_vel_d_acc,
-      (ParamFloat<px4::params::TRV_Z_VEL_P_ACC>)_param_trv_z_vel_p_acc,
-      (ParamFloat<px4::params::TRV_Z_VEL_I_ACC>)_param_trv_z_vel_i_acc,
-      (ParamFloat<px4::params::TRV_Z_VEL_D_ACC>)_param_trv_z_vel_d_acc,
-      (ParamFloat<px4::params::TRV_XY_VEL_MAX>)_param_trv_xy_vel_max,
-      (ParamFloat<px4::params::TRV_Z_V_AUTO_UP>)_param_trv_z_v_auto_up,
-      (ParamFloat<px4::params::TRV_Z_VEL_MAX_UP>)_param_trv_z_vel_max_up,
-      (ParamFloat<px4::params::TRV_Z_V_AUTO_DN>)_param_trv_z_v_auto_dn,
-      (ParamFloat<px4::params::TRV_Z_VEL_MAX_DN>)_param_trv_z_vel_max_dn,
-      (ParamFloat<px4::params::TRV_TILTMAX_AIR>)_param_trv_tiltmax_air,
-      (ParamFloat<px4::params::TRV_THR_HOVER>)_param_trv_thr_hover,
-      (ParamBool<px4::params::TRV_USE_HTE>)_param_trv_use_hte,
-      (ParamBool<px4::params::TRV_ACC_DECOUPLE>)_param_trv_acc_decouple,
+      (ParamFloat<px4::params::MPC_XY_P>)_param_mpc_xy_p,
+      (ParamFloat<px4::params::MPC_Z_P>)_param_mpc_z_p,
+      (ParamFloat<px4::params::MPC_XY_VEL_P_ACC>)_param_mpc_xy_vel_p_acc,
+      (ParamFloat<px4::params::MPC_XY_VEL_I_ACC>)_param_mpc_xy_vel_i_acc,
+      (ParamFloat<px4::params::MPC_XY_VEL_D_ACC>)_param_mpc_xy_vel_d_acc,
+      (ParamFloat<px4::params::MPC_Z_VEL_P_ACC>)_param_mpc_z_vel_p_acc,
+      (ParamFloat<px4::params::MPC_Z_VEL_I_ACC>)_param_mpc_z_vel_i_acc,
+      (ParamFloat<px4::params::MPC_Z_VEL_D_ACC>)_param_mpc_z_vel_d_acc,
+      (ParamFloat<px4::params::MPC_XY_VEL_MAX>)_param_mpc_xy_vel_max,
+      (ParamFloat<px4::params::MPC_Z_V_AUTO_UP>)_param_mpc_z_v_auto_up,
+      (ParamFloat<px4::params::MPC_Z_VEL_MAX_UP>)_param_mpc_z_vel_max_up,
+      (ParamFloat<px4::params::MPC_Z_V_AUTO_DN>)_param_mpc_z_v_auto_dn,
+      (ParamFloat<px4::params::MPC_Z_VEL_MAX_DN>)_param_mpc_z_vel_max_dn,
+      (ParamFloat<px4::params::MPC_TILTMAX_AIR>)_param_mpc_tiltmax_air,
+      (ParamFloat<px4::params::MPC_THR_HOVER>)_param_mpc_thr_hover,
+      (ParamBool<px4::params::MPC_USE_HTE>)_param_mpc_use_hte,
+      (ParamBool<px4::params::MPC_ACC_DECOUPLE>)_param_mpc_acc_decouple,
 
-      (ParamFloat<px4::params::TRV_VEL_LP>)_param_trv_vel_lp,
-      (ParamFloat<px4::params::TRV_VEL_NF_FRQ>)_param_trv_vel_nf_frq,
-      (ParamFloat<px4::params::TRV_VEL_NF_BW>)_param_trv_vel_nf_bw,
-      (ParamFloat<px4::params::TRV_VELD_LP>)_param_trv_veld_lp,
+      (ParamFloat<px4::params::MPC_VEL_LP>)_param_mpc_vel_lp,
+      (ParamFloat<px4::params::MPC_VEL_NF_FRQ>)_param_mpc_vel_nf_frq,
+      (ParamFloat<px4::params::MPC_VEL_NF_BW>)_param_mpc_vel_nf_bw,
+      (ParamFloat<px4::params::MPC_VELD_LP>)_param_mpc_veld_lp,
 
       // Takeoff / Land
       (ParamFloat<px4::params::COM_SPOOLUP_TIME>)
@@ -180,42 +180,42 @@ class ThrustVectorPositionControl
                                     */
       (ParamBool<px4::params::COM_THROW_EN>)
           _param_com_throw_en, /**< throw launch enabled  */
-      (ParamFloat<px4::params::TRV_TKO_RAMP_T>)
-          _param_trv_tko_ramp_t, /**< time constant for smooth takeoff ramp */
-      (ParamFloat<px4::params::TRV_TKO_SPEED>)_param_trv_tko_speed,
-      (ParamFloat<px4::params::TRV_LAND_SPEED>)_param_trv_land_speed,
+      (ParamFloat<px4::params::MPC_TKO_RAMP_T>)
+          _param_mpc_tko_ramp_t, /**< time constant for smooth takeoff ramp */
+      (ParamFloat<px4::params::MPC_TKO_SPEED>)_param_mpc_tko_speed,
+      (ParamFloat<px4::params::MPC_LAND_SPEED>)_param_mpc_land_speed,
 
-      (ParamFloat<px4::params::TRV_VEL_MANUAL>)_param_trv_vel_manual,
-      (ParamFloat<px4::params::TRV_VEL_MAN_BACK>)_param_trv_vel_man_back,
-      (ParamFloat<px4::params::TRV_VEL_MAN_SIDE>)_param_trv_vel_man_side,
-      (ParamFloat<px4::params::TRV_XY_CRUISE>)_param_trv_xy_cruise,
-      (ParamFloat<px4::params::TRV_LAND_ALT2>)
-          _param_trv_land_alt2, /**< downwards speed limited below this altitude
+      (ParamFloat<px4::params::MPC_VEL_MANUAL>)_param_mpc_vel_manual,
+      (ParamFloat<px4::params::MPC_VEL_MAN_BACK>)_param_mpc_vel_man_back,
+      (ParamFloat<px4::params::MPC_VEL_MAN_SIDE>)_param_mpc_vel_man_side,
+      (ParamFloat<px4::params::MPC_XY_CRUISE>)_param_mpc_xy_cruise,
+      (ParamFloat<px4::params::MPC_LAND_ALT2>)
+          _param_mpc_land_alt2, /**< downwards speed limited below this altitude
                                  */
-      (ParamInt<px4::params::TRV_ALT_MODE>)_param_trv_alt_mode,
-      (ParamFloat<px4::params::TRV_TILTMAX_LND>)
-          _param_trv_tiltmax_lnd, /**< maximum tilt for landing and smooth
+      (ParamInt<px4::params::MPC_ALT_MODE>)_param_mpc_alt_mode,
+      (ParamFloat<px4::params::MPC_TILTMAX_LND>)
+          _param_mpc_tiltmax_lnd, /**< maximum tilt for landing and smooth
                                      takeoff */
-      (ParamFloat<px4::params::TRV_THR_MIN>)_param_trv_thr_min,
-      (ParamFloat<px4::params::TRV_THR_MAX>)_param_trv_thr_max,
-      (ParamFloat<px4::params::TRV_THR_XY_MARG>)_param_trv_thr_xy_marg,
+      (ParamFloat<px4::params::MPC_THR_MIN>)_param_mpc_thr_min,
+      (ParamFloat<px4::params::MPC_THR_MAX>)_param_mpc_thr_max,
+      (ParamFloat<px4::params::MPC_THR_XY_MARG>)_param_mpc_thr_xy_marg,
 
-      (ParamFloat<px4::params::TRV_VEHICLE_RESP>)_param_trv_vehicle_resp,
-      (ParamFloat<px4::params::TRV_ACC_HOR>)_param_trv_acc_hor,
-      (ParamFloat<px4::params::TRV_ACC_DOWN_MAX>)_param_trv_acc_down_max,
-      (ParamFloat<px4::params::TRV_ACC_UP_MAX>)_param_trv_acc_up_max,
-      (ParamFloat<px4::params::TRV_ACC_HOR_MAX>)_param_trv_acc_hor_max,
-      (ParamFloat<px4::params::TRV_JERK_AUTO>)_param_trv_jerk_auto,
-      (ParamFloat<px4::params::TRV_JERK_MAX>)_param_trv_jerk_max,
-      (ParamFloat<px4::params::TRV_MAN_Y_MAX>)_param_trv_man_y_max,
-      (ParamFloat<px4::params::TRV_MAN_Y_TAU>)_param_trv_man_y_tau,
+      (ParamFloat<px4::params::MPC_VEHICLE_RESP>)_param_mpc_vehicle_resp,
+      (ParamFloat<px4::params::MPC_ACC_HOR>)_param_mpc_acc_hor,
+      (ParamFloat<px4::params::MPC_ACC_DOWN_MAX>)_param_mpc_acc_down_max,
+      (ParamFloat<px4::params::MPC_ACC_UP_MAX>)_param_mpc_acc_up_max,
+      (ParamFloat<px4::params::MPC_ACC_HOR_MAX>)_param_mpc_acc_hor_max,
+      (ParamFloat<px4::params::MPC_JERK_AUTO>)_param_mpc_jerk_auto,
+      (ParamFloat<px4::params::MPC_JERK_MAX>)_param_mpc_jerk_max,
+      (ParamFloat<px4::params::MPC_MAN_Y_MAX>)_param_mpc_man_y_max,
+      (ParamFloat<px4::params::MPC_MAN_Y_TAU>)_param_mpc_man_y_tau,
 
-      (ParamFloat<px4::params::TRV_XY_VEL_ALL>)_param_trv_xy_vel_all,
-      (ParamFloat<px4::params::TRV_Z_VEL_ALL>)_param_trv_z_vel_all,
+      (ParamFloat<px4::params::MPC_XY_VEL_ALL>)_param_mpc_xy_vel_all,
+      (ParamFloat<px4::params::MPC_Z_VEL_ALL>)_param_mpc_z_vel_all,
 
-      (ParamFloat<px4::params::TRV_XY_ERR_MAX>)_param_trv_xy_err_max,
-      (ParamFloat<px4::params::TRV_YAWRAUTO_MAX>)_param_trv_yawrauto_max,
-      (ParamFloat<px4::params::TRV_YAWRAUTO_ACC>)_param_trv_yawrauto_acc);
+      (ParamFloat<px4::params::MPC_XY_ERR_MAX>)_param_mpc_xy_err_max,
+      (ParamFloat<px4::params::MPC_YAWRAUTO_MAX>)_param_mpc_yawrauto_max,
+      (ParamFloat<px4::params::MPC_YAWRAUTO_ACC>)_param_mpc_yawrauto_acc);
 
   math::WelfordMean<float> _sample_interval_s{};
 

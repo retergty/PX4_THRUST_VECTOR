@@ -48,4 +48,5 @@ px4_add_module(
 		geo
 		SlewRate
 		iLQR
+		motion_planning
 	)

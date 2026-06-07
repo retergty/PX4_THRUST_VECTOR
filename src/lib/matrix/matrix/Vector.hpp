@@ -24,7 +24,14 @@ class Vector : public Matrix<Type, M, 1> {
 
   Vector() = default;
 
+  Vector(const Vector& other) : MatrixM1(other) {}
+
   Vector(const MatrixM1& other) : MatrixM1(other) {}
+
+  Vector& operator=(const Vector& other) {
+    MatrixM1::operator=(other);
+    return *this;
+  }
 
   template <typename OtherType>
   explicit Vector(const Vector<OtherType, M>& other) {

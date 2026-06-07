@@ -41,7 +41,7 @@
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_ACC_UP_MAX, 4.f);
+PARAM_DEFINE_FLOAT(MPC_ACC_UP_MAX, 4.f);
 
 /**
  * Maximum downwards acceleration in climb rate controlled modes
@@ -53,7 +53,7 @@ PARAM_DEFINE_FLOAT(TRV_ACC_UP_MAX, 4.f);
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_ACC_DOWN_MAX, 3.f);
+PARAM_DEFINE_FLOAT(MPC_ACC_DOWN_MAX, 3.f);
 
 /**
  * Manual yaw rate input filter time constant
@@ -68,7 +68,7 @@ PARAM_DEFINE_FLOAT(TRV_ACC_DOWN_MAX, 3.f);
  * @increment 0.01
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_MAN_Y_TAU, 0.08f);
+PARAM_DEFINE_FLOAT(MPC_MAN_Y_TAU, 0.08f);
 
 /**
  * Altitude reference mode
@@ -79,7 +79,7 @@ PARAM_DEFINE_FLOAT(TRV_MAN_Y_TAU, 0.08f);
  * It will revert to relative earth frame if the distance to ground estimate becomes invalid.
  * 2: relative to ground (requires distance sensor) when stationary
  * and relative to earth frame when moving horizontally.
- * The speed threshold is TRV_HOLD_MAX_XY
+ * The speed threshold is MPC_HOLD_MAX_XY
  *
  * @min 0
  * @max 2
@@ -88,12 +88,12 @@ PARAM_DEFINE_FLOAT(TRV_MAN_Y_TAU, 0.08f);
  * @value 2 Terrain hold
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_INT32(TRV_ALT_MODE, 2);
+PARAM_DEFINE_INT32(MPC_ALT_MODE, 2);
 
 /**
  * Maximum horizontal velocity for which position hold is enabled (use 0 to disable check)
  *
- * Only used with TRV_POS_MODE Direct velocity or TRV_ALT_MODE 2
+ * Only used with MPC_POS_MODE Direct velocity or MPC_ALT_MODE 2
  *
  * @unit m/s
  * @min 0
@@ -101,12 +101,12 @@ PARAM_DEFINE_INT32(TRV_ALT_MODE, 2);
  * @decimal 2
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_HOLD_MAX_XY, 0.8f);
+PARAM_DEFINE_FLOAT(MPC_HOLD_MAX_XY, 0.8f);
 
 /**
  * Maximum vertical velocity for which position hold is enabled (use 0 to disable check)
  *
- * Only used with TRV_ALT_MODE 1
+ * Only used with MPC_ALT_MODE 1
  *
  * @unit m/s
  * @min 0
@@ -114,4 +114,4 @@ PARAM_DEFINE_FLOAT(TRV_HOLD_MAX_XY, 0.8f);
  * @decimal 2
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_HOLD_MAX_Z, 0.6f);
+PARAM_DEFINE_FLOAT(MPC_HOLD_MAX_Z, 0.6f);

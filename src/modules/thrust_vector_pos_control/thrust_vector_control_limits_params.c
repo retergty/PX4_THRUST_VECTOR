@@ -44,7 +44,7 @@
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_XY_VEL_MAX, 12.f);
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_MAX, 12.f);
 
 /**
  * Maximum ascent velocity
@@ -52,7 +52,7 @@ PARAM_DEFINE_FLOAT(TRV_XY_VEL_MAX, 12.f);
  * Absolute maximum for all climb rate controlled modes.
  * In manually piloted modes full stick deflection commands this velocity.
  *
- * For default autonomous velocity see TRV_Z_V_AUTO_UP
+ * For default autonomous velocity see MPC_Z_V_AUTO_UP
  *
  * @unit m/s
  * @min 0.5
@@ -61,7 +61,7 @@ PARAM_DEFINE_FLOAT(TRV_XY_VEL_MAX, 12.f);
  * @decimal 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_Z_VEL_MAX_UP, 3.f);
+PARAM_DEFINE_FLOAT(MPC_Z_VEL_MAX_UP, 3.f);
 
 /**
  * Maximum descent velocity
@@ -69,7 +69,7 @@ PARAM_DEFINE_FLOAT(TRV_Z_VEL_MAX_UP, 3.f);
  * Absolute maximum for all climb rate controlled modes.
  * In manually piloted modes full stick deflection commands this velocity.
  *
- * For default autonomous velocity see TRV_Z_V_AUTO_UP
+ * For default autonomous velocity see MPC_Z_V_AUTO_UP
  *
  * @unit m/s
  * @min 0.5
@@ -78,7 +78,7 @@ PARAM_DEFINE_FLOAT(TRV_Z_VEL_MAX_UP, 3.f);
  * @decimal 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_Z_VEL_MAX_DN, 1.5f);
+PARAM_DEFINE_FLOAT(MPC_Z_VEL_MAX_DN, 1.5f);
 
 /**
  * Maximum tilt angle in air
@@ -93,7 +93,7 @@ PARAM_DEFINE_FLOAT(TRV_Z_VEL_MAX_DN, 1.5f);
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_TILTMAX_AIR, 45.f);
+PARAM_DEFINE_FLOAT(MPC_TILTMAX_AIR, 45.f);
 
 /**
  * Maximum tilt during inital takeoff ramp
@@ -107,7 +107,7 @@ PARAM_DEFINE_FLOAT(TRV_TILTMAX_AIR, 45.f);
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_TILTMAX_LND, 12.f);
+PARAM_DEFINE_FLOAT(MPC_TILTMAX_LND, 12.f);
 
 /**
  * Minimum collective thrust in climb rate controlled modes
@@ -123,7 +123,7 @@ PARAM_DEFINE_FLOAT(TRV_TILTMAX_LND, 12.f);
  * @increment 0.01
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_THR_MIN, 0.12f);
+PARAM_DEFINE_FLOAT(MPC_THR_MIN, 0.12f);
 
 /**
  * Maximum collective thrust in climb rate controlled modes
@@ -137,7 +137,7 @@ PARAM_DEFINE_FLOAT(TRV_THR_MIN, 0.12f);
  * @increment 0.05
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_THR_MAX, 1.f);
+PARAM_DEFINE_FLOAT(MPC_THR_MAX, 1.f);
 
 /**
  * Acceleration to tilt coupling
@@ -149,4 +149,4 @@ PARAM_DEFINE_FLOAT(TRV_THR_MAX, 1.f);
  * @boolean
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_INT32(TRV_ACC_DECOUPLE, 1);
+PARAM_DEFINE_INT32(MPC_ACC_DECOUPLE, 1);

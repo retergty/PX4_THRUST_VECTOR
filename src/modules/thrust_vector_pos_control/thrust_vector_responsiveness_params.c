@@ -47,13 +47,13 @@
  * @increment 0.05
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_VEHICLE_RESP, -0.4f);
+PARAM_DEFINE_FLOAT(MPC_VEHICLE_RESP, -0.4f);
 
 /**
  * Overall Horizontal Velocity Limit
  *
  * If set to a value greater than zero, other parameters are automatically set (such as
- * TRV_XY_VEL_MAX or TRV_VEL_MANUAL).
+ * MPC_XY_VEL_MAX or MPC_VEL_MANUAL).
  * If set to a negative value, the existing individual parameters are used.
  *
  * @min -20
@@ -62,13 +62,13 @@ PARAM_DEFINE_FLOAT(TRV_VEHICLE_RESP, -0.4f);
  * @increment 1
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_XY_VEL_ALL, -10.f);
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_ALL, -10.f);
 
 /**
  * Overall Vertical Velocity Limit
  *
  * If set to a value greater than zero, other parameters are automatically set (such as
- * TRV_Z_VEL_MAX_UP or TRV_LAND_SPEED).
+ * MPC_Z_VEL_MAX_UP or MPC_LAND_SPEED).
  * If set to a negative value, the existing individual parameters are used.
  *
  * @min -3
@@ -77,4 +77,4 @@ PARAM_DEFINE_FLOAT(TRV_XY_VEL_ALL, -10.f);
  * @increment 0.5
  * @group ThrustVector Position Control
  */
-PARAM_DEFINE_FLOAT(TRV_Z_VEL_ALL, -3.f);
+PARAM_DEFINE_FLOAT(MPC_Z_VEL_ALL, -3.f);
