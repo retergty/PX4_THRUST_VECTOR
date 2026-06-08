@@ -83,7 +83,7 @@ struct PositionControlStates {
  */
 class PositionControl {
  public:
-  static constexpr size_t kPredictLength = 30;
+  static constexpr size_t kPredictLength = 25;
   static constexpr float kTimeStep = 1.f / 125.f;
   PositionControl();
   ~PositionControl() { delete _ilqr; }
@@ -102,6 +102,9 @@ class PositionControl {
    */
   void setVelocityLimits(const float vel_horizontal, const float vel_up,
                          float vel_down);
+
+  void setAccelerationLimits(const float acc_horizontal, const float acc_up,
+                             const float acc_down);
 
   /**
    * Set the minimum and maximum collective normalized thrust [0,1] that can be
@@ -148,6 +151,12 @@ class PositionControl {
    * @param PositionControlStates structure
    */
   void setState(const PositionControlStates& states);
+
+  void resetReferenceTrajectory() {
+    if (_ilqr != nullptr) {
+      _ilqr->resetReferenceTrajectory(_vel, _input);
+    }
+  }
 
   /**
    * Pass the desired setpoints
@@ -236,6 +245,9 @@ class PositionControl {
                           ///< position control
   float _lim_vel_down{};  ///< Downwards velocity limit with feed forward and
                           ///< position control
+  float _lim_acc_horizontal{};  ///< Horizontal acceleration limit
+  float _lim_acc_up{};          ///< Upwards acceleration limit
+  float _lim_acc_down{};        ///< Downwards acceleration limit
   float _lim_thr_min{};  ///< Minimum collective thrust allowed as output [-1,0]
                          ///< e.g. -0.9
   float _lim_thr_max{};  ///< Maximum collective thrust allowed as output [-1,0]

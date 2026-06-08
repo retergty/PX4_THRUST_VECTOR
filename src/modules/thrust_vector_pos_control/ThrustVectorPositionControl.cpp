@@ -610,6 +610,9 @@ void ThrustVectorPositionControl::Run() {
                     _param_mpc_z_vel_max_up.get()),  // takeoff ramp starts with
                                                      // negative velocity limit
           math::max(speed_down, 0.f));
+      _control.setAccelerationLimits(_param_mpc_acc_hor_max.get(),
+                                     _param_mpc_acc_up_max.get(),
+                                     _param_mpc_acc_down_max.get());
 
       if (!std::isnan(_roll_pitch_sp.pitch)) {
         _pitch_setpoint_filter.update(_roll_pitch_sp.pitch);
@@ -661,6 +664,9 @@ void ThrustVectorPositionControl::Run() {
         _control.setVelocityLimits(_param_mpc_xy_vel_max.get(),
                                    _param_mpc_z_vel_max_up.get(),
                                    _param_mpc_z_vel_max_dn.get());
+        _control.setAccelerationLimits(_param_mpc_acc_hor_max.get(),
+                                       _param_mpc_acc_up_max.get(),
+                                       _param_mpc_acc_down_max.get());
         _control.update(dt);
       }
 

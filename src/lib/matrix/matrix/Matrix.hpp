@@ -627,6 +627,34 @@ class Matrix {
     return slice<R, C>(0, N - C);
   }
 
+  template <int R, int C>
+  ConstSlice<Type, R, C, M, N> bottomLeftCorner() const {
+    static_assert(R <= M, "Corner rows bigger than matrix");
+    static_assert(C <= N, "Corner cols bigger than matrix");
+    return slice<R, C>(M - R, 0);
+  }
+
+  template <int R, int C>
+  Slice<Type, R, C, M, N> bottomLeftCorner() {
+    static_assert(R <= M, "Corner rows bigger than matrix");
+    static_assert(C <= N, "Corner cols bigger than matrix");
+    return slice<R, C>(M - R, 0);
+  }
+
+  template <int R, int C>
+  ConstSlice<Type, R, C, M, N> bottomRightCorner() const {
+    static_assert(R <= M, "Corner rows bigger than matrix");
+    static_assert(C <= N, "Corner cols bigger than matrix");
+    return slice<R, C>(M - R, N - C);
+  }
+
+  template <int R, int C>
+  Slice<Type, R, C, M, N> bottomRightCorner() {
+    static_assert(R <= M, "Corner rows bigger than matrix");
+    static_assert(C <= N, "Corner cols bigger than matrix");
+    return slice<R, C>(M - R, N - C);
+  }
+
   template <int R>
   ConstSlice<Type, R, N, M, N> topRows() const {
     static_assert(R <= M, "Rows bigger than matrix");

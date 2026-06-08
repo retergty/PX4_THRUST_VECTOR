@@ -41,8 +41,9 @@
 #include <float.h>
 #include <geo/geo.h>
 #include <mathlib/mathlib.h>
-#include <iostream>
 #include <px4_platform_common/defines.h>
+
+#include <iostream>
 
 #include "ControlMath.hpp"
 #include "matrix/Matrix.hpp"
@@ -59,13 +60,11 @@ PositionControl::PositionControl() {
   ocp_settings.Q.setZero();
   ocp_settings.Q.template topLeftCorner<3, 3>().setIdentity();
   ocp_settings.Q *= 3.0;
-  ocp_settings.R = float(1) * decltype(ocp_settings.R)::Identity();
-  ocp_settings.R(2,2) /= 2;
-  ocp_settings.S = float(1) * decltype(ocp_settings.S)::Identity();
+  ocp_settings.R = float(2.75) * decltype(ocp_settings.R)::Identity();
   ocp_settings.Qf.setZero();
   ocp_settings.Qf.template topLeftCorner<3, 3>() =
-      float(10.0) * matrix::Matrix<float, 3, 3>::Identity();
-  ocp_settings.weight = 2;
+      float(5.0) * matrix::Matrix<float, 3, 3>::Identity();
+  ocp_settings.weight = 0.5;
 
   DDPSettings<float>& ddp_settings = ilqr_settings.ddpSettings;
 
@@ -77,7 +76,11 @@ PositionControl::PositionControl() {
   ref_traj_settings.max_velocity = matrix::Vector3f{12.f, 12.f, 10.f};
   ref_traj_settings.max_acceleration = matrix::Vector3f{7.f, 7.f, 8.f};
   ref_traj_settings.max_jerk = matrix::Vector3f{4.f, 4.f, 6.f};
+  ref_traj_settings.acceleration_increment_feedforward_gain = 0.4f;
   ref_traj_settings.synchronize_axes = false;
+  setAccelerationLimits(ref_traj_settings.max_acceleration(0),
+                        ref_traj_settings.max_acceleration(2),
+                        ref_traj_settings.max_acceleration(2));
 
   _ilqr =
       new thrust_vector::ThrustVectorILQR<float, kPredictLength>(ilqr_settings);
@@ -92,6 +95,14 @@ void PositionControl::setVelocityLimits(const float vel_horizontal,
   _lim_vel_horizontal = vel_horizontal;
   _lim_vel_up = vel_up;
   _lim_vel_down = vel_down;
+}
+
+void PositionControl::setAccelerationLimits(const float acc_horizontal,
+                                            const float acc_up,
+                                            const float acc_down) {
+  _lim_acc_horizontal = math::max(acc_horizontal, 0.f);
+  _lim_acc_up = math::max(acc_up, 0.f);
+  _lim_acc_down = math::max(acc_down, 0.f);
 }
 
 void PositionControl::setThrustLimits(const float min, const float max) {
@@ -185,9 +196,21 @@ void PositionControl::_velocityControl() {
     // const auto& performence = _ilqr->solver().performanceIndex();
     // std::cout << "iLQR time: " << _time << " cost: " << performence.cost
     // << std::endl;
-    _input = primalSolution.inputTrajectory_.front();
-    ControlMath::addIfNotNanVector3f(_acc_sp, _input);
+    const Vector3f delta_input = primalSolution.inputTrajectory_.front();
+    _input += delta_input;
 
+    const float input_xy_norm =
+        sqrtf(_input(0) * _input(0) + _input(1) * _input(1));
+    if ((_lim_acc_horizontal > FLT_EPSILON) &&
+        (input_xy_norm > _lim_acc_horizontal)) {
+      const float scale = _lim_acc_horizontal / input_xy_norm;
+      _input(0) *= scale;
+      _input(1) *= scale;
+    }
+
+    _input(2) = math::constrain(_input(2), -_lim_acc_up, _lim_acc_down);
+    //std::cout << "input: " << _input.transpose() << std::endl;
+    ControlMath::addIfNotNanVector3f(_acc_sp, _input);
   }
   _accelerationControl();
 }
@@ -198,7 +221,7 @@ void PositionControl::_accelerationControl() {
 
   _thr_sp = acc_thr_sp * (_hover_thrust / CONSTANTS_ONE_G);
   _thr_sp(2) = math::min(_thr_sp(2), -_lim_thr_min);
-  //std::cout << "thr_sp: " << _thr_sp.transpose() << std::endl;
+  // std::cout << "thr_sp: " << _thr_sp.transpose() << std::endl;
 }
 
 bool PositionControl::_inputValid() {
@@ -256,8 +279,8 @@ void PositionControl::getAttitudeSetpoint(
   }
 
   attitude_setpoint.yaw_sp_move_rate = _yawspeed_sp;
-//     std::cout << "thrust_body: " << attitude_setpoint.thrust_body[0] << " "
-//     << attitude_setpoint.thrust_body[1] << " " <<
-//     attitude_setpoint.thrust_body[2]
-//     << " " << std::endl;
+  //     std::cout << "thrust_body: " << attitude_setpoint.thrust_body[0] << " "
+  //     << attitude_setpoint.thrust_body[1] << " " <<
+  //     attitude_setpoint.thrust_body[2]
+  //     << " " << std::endl;
 }

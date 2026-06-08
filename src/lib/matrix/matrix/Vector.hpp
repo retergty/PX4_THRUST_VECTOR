@@ -172,6 +172,18 @@ class Vector : public Matrix<Type, M, 1> {
     return this->template slice<N, 1>(M - N, 0);
   }
 
+  template <int N>
+  ConstSlice<Type, N, 1, M, 1> segment(size_t start) const {
+    static_assert(N <= M, "Segment size bigger than vector");
+    return this->template slice<N, 1>(start, 0);
+  }
+
+  template <int N>
+  Slice<Type, N, 1, M, 1> segment(size_t start) {
+    static_assert(N <= M, "Segment size bigger than vector");
+    return this->template slice<N, 1>(start, 0);
+  }
+
   inline const Type& operator()(size_t i) const {
     assert(i < M);
 
