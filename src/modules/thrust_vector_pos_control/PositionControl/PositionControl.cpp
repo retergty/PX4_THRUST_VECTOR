@@ -55,38 +55,34 @@ const trajectory_setpoint_s PositionControl::empty_trajectory_setpoint = {
     NAN};
 
 PositionControl::PositionControl() {
-  thrust_vector::ThrustVectorOCPSettings<float>& ocp_settings =
+  thrust_vector_first_order_lag::ThrustVectorOCPSettings<float>& ocp_settings =
       ilqr_settings.ocpSettings;
   ocp_settings.Q.setZero();
   ocp_settings.Q.template topLeftCorner<3, 3>().setIdentity();
-  ocp_settings.Q *= 3.0;
-  ocp_settings.R = float(2.75) * decltype(ocp_settings.R)::Identity();
+  ocp_settings.Q *= 3.0f;
+  ocp_settings.Q(2, 2) *= 3.0f;
+  ocp_settings.R = float(2.4) * decltype(ocp_settings.R)::Identity();
   ocp_settings.Qf.setZero();
   ocp_settings.Qf.template topLeftCorner<3, 3>() =
-      float(5.0) * matrix::Matrix<float, 3, 3>::Identity();
-  ocp_settings.weight = 0.5;
+      float(10.0) * matrix::Matrix<float, 3, 3>::Identity();
+  ocp_settings.weight = 1.0;
+  ocp_settings.alpha = 0.25;
+  ocp_settings.referenceTrajectoryAlpha = matrix::Vector3f{0.3f, 0.3f, 0.5f};
 
   DDPSettings<float>& ddp_settings = ilqr_settings.ddpSettings;
 
   ddp_settings.timeStep = kTimeStep;
   ddp_settings.maxNumIterations = 3;
 
-  thrust_vector::ThrustVectorReferenceTrajectorySettings& ref_traj_settings =
-      ilqr_settings.referenceTrajectorySettings;
-  ref_traj_settings.max_velocity = matrix::Vector3f{12.f, 12.f, 10.f};
-  ref_traj_settings.max_acceleration = matrix::Vector3f{7.f, 7.f, 8.f};
-  ref_traj_settings.max_jerk = matrix::Vector3f{4.f, 4.f, 6.f};
-  ref_traj_settings.acceleration_increment_feedforward_gain = 0.4f;
-  ref_traj_settings.synchronize_axes = false;
-  setAccelerationLimits(ref_traj_settings.max_acceleration(0),
-                        ref_traj_settings.max_acceleration(2),
-                        ref_traj_settings.max_acceleration(2));
+  setAccelerationLimits(5.f, 8.f, 8.f);
 
-  _ilqr =
-      new thrust_vector::ThrustVectorILQR<float, kPredictLength>(ilqr_settings);
+  _ilqr = new thrust_vector_first_order_lag::ThrustVectorILQR<float,
+                                                              kPredictLength>(
+      ilqr_settings);
 
   _state.setZero();
   _input.setZero();
+  _acceleration.setZero();
 }
 
 void PositionControl::setVelocityLimits(const float vel_horizontal,
@@ -130,6 +126,7 @@ void PositionControl::setState(const PositionControlStates& states) {
   _time = states.time;
   _pos = states.position;
   _vel = states.velocity;
+  _acceleration = states.acceleration;
   _yaw = states.yaw;
 }
 
@@ -186,10 +183,12 @@ void PositionControl::_positionControl() {
 }
 
 void PositionControl::_velocityControl() {
-  if (_vel_sp.isAllFinite() && _vel.isAllFinite()) {
-    _ilqr->setDesireTrajectory(_time, _vel_sp, _vel, _input);
+  if (_vel_sp.isAllFinite() && _vel.isAllFinite() &&
+      _acceleration.isAllFinite()) {
+    _ilqr->setDesireTrajectory(_time, _vel_sp, _vel, _acceleration, _input);
     _state.template head<3>() = _vel;
-    _state.template tail<3>() = _input;
+    _state.template segment<3>(3) = _acceleration;
+    _state.template segment<3>(6) = _input;
     _ilqr->solver().run(_time, _state);
 
     const auto& primalSolution = _ilqr->solver().primalSolution();
@@ -199,17 +198,21 @@ void PositionControl::_velocityControl() {
     const Vector3f delta_input = primalSolution.inputTrajectory_.front();
     _input += delta_input;
 
-    const float input_xy_norm =
-        sqrtf(_input(0) * _input(0) + _input(1) * _input(1));
-    if ((_lim_acc_horizontal > FLT_EPSILON) &&
-        (input_xy_norm > _lim_acc_horizontal)) {
-      const float scale = _lim_acc_horizontal / input_xy_norm;
-      _input(0) *= scale;
-      _input(1) *= scale;
-    }
+    //     const float input_xy_norm =
+    //         sqrtf(_input(0) * _input(0) + _input(1) * _input(1));
+    //     if ((_lim_acc_horizontal > FLT_EPSILON) &&
+    //         (input_xy_norm > _lim_acc_horizontal)) {
+    //       const float scale = _lim_acc_horizontal / input_xy_norm;
+    //       _input(0) *= scale;
+    //       _input(1) *= scale;
+    //     }
 
-    _input(2) = math::constrain(_input(2), -_lim_acc_up, _lim_acc_down);
-    //std::cout << "input: " << _input.transpose() << std::endl;
+    //     _input(2) = math::constrain(_input(2), -_lim_acc_up, _lim_acc_down);
+    //     std::cout << "accel: " << _acceleration.transpose() << std::endl;
+    //     std::cout << "delta_input: " << delta_input.transpose() << std::endl;
+    //     std::cout << "input: " << _input.transpose() << std::endl;
+    //     std::cout << "vel_sp: " << _vel_sp.transpose() << std::endl;
+    //     std::cout << "vel: " << _vel.transpose() << std::endl;
     ControlMath::addIfNotNanVector3f(_acc_sp, _input);
   }
   _accelerationControl();
@@ -246,6 +249,10 @@ bool PositionControl::_inputValid() {
 
     if (PX4_ISFINITE(_vel_sp(i))) {
       valid = valid && PX4_ISFINITE(_vel(i));
+    }
+
+    if (PX4_ISFINITE(_pos_sp(i)) || PX4_ISFINITE(_vel_sp(i))) {
+      valid = valid && PX4_ISFINITE(_acceleration(i));
     }
   }
 

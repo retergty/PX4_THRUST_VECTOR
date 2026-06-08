@@ -48,7 +48,7 @@
 #include <iLQR/iLQR/iLQRCore.hpp>
 #include <matrix/matrix/math.hpp>
 
-#include "ThrustVector.hpp"
+#include "ThrustVectorFirstOrderLag.hpp"
 #include "iLQR/DDPSetting.hpp"
 #include "matrix/Vector3.hpp"
 
@@ -154,7 +154,7 @@ class PositionControl {
 
   void resetReferenceTrajectory() {
     if (_ilqr != nullptr) {
-      _ilqr->resetReferenceTrajectory(_vel, _input);
+      _ilqr->resetReferenceTrajectory(_vel, _acceleration);
     }
   }
 
@@ -265,10 +265,11 @@ class PositionControl {
               ///< the tilt setpoint
 
   // States
-  float _time;           /** setpoint time in s */
-  matrix::Vector3f _pos; /**< current position */
-  matrix::Vector3f _vel; /**< current velocity */
-  float _yaw{};          /**< current heading */
+  float _time;                    /** setpoint time in s */
+  matrix::Vector3f _pos;          /**< current position */
+  matrix::Vector3f _vel;          /**< current velocity */
+  matrix::Vector3f _acceleration; /**< current effective acceleration */
+  float _yaw{};                   /**< current heading */
 
   // Setpoints
   matrix::Vector3f _pos_sp; /**< desired position */
@@ -280,8 +281,9 @@ class PositionControl {
   float _roll_sp{NAN};      /**< desired roll */
   float _pitch_sp{NAN};     /**< desired pitch */
 
-  matrix::Vector<float, 6> _state;
+  matrix::Vector<float, thrust_vector_first_order_lag::STATE_DIM> _state;
   matrix::Vector<float, 3> _input;
-  thrust_vector::ThrustVectorILQRSettings<float> ilqr_settings;
-  thrust_vector::ThrustVectorILQR<float, kPredictLength>* _ilqr{nullptr};
+  thrust_vector_first_order_lag::ThrustVectorILQRSettings<float> ilqr_settings;
+  thrust_vector_first_order_lag::ThrustVectorILQR<float, kPredictLength>* _ilqr{
+      nullptr};
 };
