@@ -90,6 +90,7 @@ class ThrustVectorPositionControl
   /** @see ModuleBase */
   static int print_usage(const char* reason = nullptr);
 
+  int print_status() override;
   bool init();
 
  private:
@@ -159,6 +160,12 @@ class ThrustVectorPositionControl
       (ParamFloat<px4::params::MPC_Z_VEL_P_ACC>)_param_mpc_z_vel_p_acc,
       (ParamFloat<px4::params::MPC_Z_VEL_I_ACC>)_param_mpc_z_vel_i_acc,
       (ParamFloat<px4::params::MPC_Z_VEL_D_ACC>)_param_mpc_z_vel_d_acc,
+      (ParamFloat<px4::params::MPC_ABIAS_XY_I>)_param_mpc_abias_xy_i,
+      (ParamFloat<px4::params::MPC_ABIAS_Z_I>)_param_mpc_abias_z_i,
+      (ParamFloat<px4::params::MPC_ABIAS_XY_LK>)_param_mpc_abias_xy_lk,
+      (ParamFloat<px4::params::MPC_ABIAS_Z_LK>)_param_mpc_abias_z_lk,
+      (ParamFloat<px4::params::MPC_ABIAS_XY_A>)_param_mpc_abias_xy_a,
+      (ParamFloat<px4::params::MPC_ABIAS_Z_A>)_param_mpc_abias_z_a,
       (ParamFloat<px4::params::MPC_XY_VEL_MAX>)_param_mpc_xy_vel_max,
       (ParamFloat<px4::params::MPC_Z_V_AUTO_UP>)_param_mpc_z_v_auto_up,
       (ParamFloat<px4::params::MPC_Z_VEL_MAX_UP>)_param_mpc_z_vel_max_up,
@@ -205,6 +212,8 @@ class ThrustVectorPositionControl
       (ParamFloat<px4::params::MPC_ACC_DOWN_MAX>)_param_mpc_acc_down_max,
       (ParamFloat<px4::params::MPC_ACC_UP_MAX>)_param_mpc_acc_up_max,
       (ParamFloat<px4::params::MPC_ACC_HOR_MAX>)_param_mpc_acc_hor_max,
+      (ParamFloat<px4::params::MPC_ABIAS_XY_MAX>)_param_mpc_abias_xy_max,
+      (ParamFloat<px4::params::MPC_ABIAS_Z_MAX>)_param_mpc_abias_z_max,
       (ParamFloat<px4::params::MPC_JERK_AUTO>)_param_mpc_jerk_auto,
       (ParamFloat<px4::params::MPC_JERK_MAX>)_param_mpc_jerk_max,
       (ParamFloat<px4::params::MPC_MAN_Y_MAX>)_param_mpc_man_y_max,

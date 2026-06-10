@@ -150,3 +150,33 @@ PARAM_DEFINE_FLOAT(MPC_THR_MAX, 1.f);
  * @group ThrustVector Position Control
  */
 PARAM_DEFINE_INT32(MPC_ACC_DECOUPLE, 1);
+
+/**
+ * Horizontal acceleration bias estimate limit
+ *
+ * Absolute limit for the horizontal command acceleration bias reference used by
+ * the incremental MPC acceleration bias estimator.
+ *
+ * @unit m/s^2
+ * @min 0
+ * @max 10
+ * @decimal 2
+ * @increment 0.1
+ * @group ThrustVector Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ABIAS_XY_MAX, 5.f);
+
+/**
+ * Vertical acceleration bias estimate limit
+ *
+ * Absolute limit for the vertical command acceleration bias reference used by
+ * the incremental MPC acceleration bias estimator.
+ *
+ * @unit m/s^2
+ * @min 0
+ * @max 10
+ * @decimal 2
+ * @increment 0.1
+ * @group ThrustVector Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ABIAS_Z_MAX, 5.f);

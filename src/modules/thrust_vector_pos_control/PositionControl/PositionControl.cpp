@@ -43,11 +43,12 @@
 #include <mathlib/mathlib.h>
 #include <px4_platform_common/defines.h>
 
-#include <iostream>
-
 #include "ControlMath.hpp"
+#include "iLQR/DDPSetting.hpp"
 #include "matrix/Matrix.hpp"
 #include "matrix/Vector3.hpp"
+#include "px4_platform_common/log.h"
+
 using namespace matrix;
 
 const trajectory_setpoint_s PositionControl::empty_trajectory_setpoint = {
@@ -59,15 +60,16 @@ PositionControl::PositionControl() {
       ilqr_settings.ocpSettings;
   ocp_settings.Q.setZero();
   ocp_settings.Q.template topLeftCorner<3, 3>().setIdentity();
-  ocp_settings.Q *= 3.0f;
-  ocp_settings.Q(2, 2) *= 3.0f;
-  ocp_settings.R = float(2.4) * decltype(ocp_settings.R)::Identity();
+  ocp_settings.Q *= 2.0f;
+  ocp_settings.Q(2, 2) *= 2.5f;
+  ocp_settings.R = float(1) * decltype(ocp_settings.R)::Identity();
+  ocp_settings.Ra = float(0.4) * decltype(ocp_settings.Ra)::Identity();
   ocp_settings.Qf.setZero();
   ocp_settings.Qf.template topLeftCorner<3, 3>() =
       float(10.0) * matrix::Matrix<float, 3, 3>::Identity();
-  ocp_settings.weight = 1.0;
-  ocp_settings.alpha = 0.25;
-  ocp_settings.referenceTrajectoryAlpha = matrix::Vector3f{0.3f, 0.3f, 0.5f};
+  ocp_settings.weight = 1;
+  ocp_settings.alpha = 0.3;
+  ocp_settings.referenceTrajectoryAlpha = matrix::Vector3f{0.4f, 0.4f, 0.6f};
 
   DDPSettings<float>& ddp_settings = ilqr_settings.ddpSettings;
 
@@ -99,6 +101,24 @@ void PositionControl::setAccelerationLimits(const float acc_horizontal,
   _lim_acc_horizontal = math::max(acc_horizontal, 0.f);
   _lim_acc_up = math::max(acc_up, 0.f);
   _lim_acc_down = math::max(acc_down, 0.f);
+}
+
+void PositionControl::setAccelerationBiasEstimatorGains(
+    const matrix::Vector3f& Ki, const matrix::Vector3f& leak,
+    const matrix::Vector3f& alpha) {
+  accel_bias_estimator_.setBiasIntegrateGain(Ki);
+  accel_bias_estimator_.setBiasLeakGain(leak);
+  accel_bias_estimator_.setLowPassAlpha(alpha);
+}
+
+void PositionControl::setAccelerationBiasLimits(const float bias_horizontal,
+                                                const float bias_vertical) {
+  const float horizontal_limit = math::max(bias_horizontal, 0.f);
+  const float vertical_limit = math::max(bias_vertical, 0.f);
+
+  accel_bias_estimator_.setLimits(
+      matrix::Vector3f{horizontal_limit, horizontal_limit, vertical_limit},
+      matrix::Vector3f{-horizontal_limit, -horizontal_limit, -vertical_limit});
 }
 
 void PositionControl::setThrustLimits(const float min, const float max) {
@@ -136,7 +156,6 @@ void PositionControl::setInputSetpoint(const trajectory_setpoint_s& setpoint) {
   _acc_sp = Vector3f(setpoint.acceleration);
   _yaw_sp = setpoint.yaw;
   _yawspeed_sp = setpoint.yawspeed;
-  // std::cout << "pos_sp: " << _pos_sp.transpose() << std::endl;
 }
 
 void PositionControl::setPitchSetpoint(const float pitch_sp) {
@@ -152,7 +171,7 @@ bool PositionControl::update(const float dt) {
 
   if (valid) {
     _positionControl();
-    _velocityControl();
+    _velocityControl(dt);
 
     _yawspeed_sp = PX4_ISFINITE(_yawspeed_sp) ? _yawspeed_sp : 0.f;
     _yaw_sp = PX4_ISFINITE(_yaw_sp)
@@ -182,37 +201,56 @@ void PositionControl::_positionControl() {
   _vel_sp(2) = math::constrain(_vel_sp(2), -_lim_vel_up, _lim_vel_down);
 }
 
-void PositionControl::_velocityControl() {
+void PositionControl::_velocityControl(const float dt) {
   if (_vel_sp.isAllFinite() && _vel.isAllFinite() &&
       _acceleration.isAllFinite()) {
-    _ilqr->setDesireTrajectory(_time, _vel_sp, _vel, _acceleration, _input);
+    const Vector3f velocity_error = _vel_sp - _vel;
+    bool freeze_bias_axis[3] = {false, false, false};
+
+    const float current_input_xy_norm =
+        sqrtf(_input(0) * _input(0) + _input(1) * _input(1));
+
+    if ((_lim_acc_horizontal > FLT_EPSILON) &&
+        (current_input_xy_norm >= _lim_acc_horizontal - FLT_EPSILON)) {
+      const float horizontal_error_projection =
+          _input(0) * velocity_error(0) + _input(1) * velocity_error(1);
+
+      if (horizontal_error_projection > 0.f) {
+        freeze_bias_axis[0] = true;
+        freeze_bias_axis[1] = true;
+      }
+    }
+
+    if (((_input(2) <= -_lim_acc_up + FLT_EPSILON) &&
+         (velocity_error(2) < 0.f)) ||
+        ((_input(2) >= _lim_acc_down - FLT_EPSILON) &&
+         (velocity_error(2) > 0.f))) {
+      freeze_bias_axis[2] = true;
+    }
+
+    accel_bias_estimator_.update(dt, velocity_error, freeze_bias_axis);
+
+    _ilqr->setDesireTrajectory(_time, _vel_sp, _vel,
+                               accel_bias_estimator_.bias());
     _state.template head<3>() = _vel;
     _state.template segment<3>(3) = _acceleration;
     _state.template segment<3>(6) = _input;
     _ilqr->solver().run(_time, _state);
 
     const auto& primalSolution = _ilqr->solver().primalSolution();
-    // const auto& performence = _ilqr->solver().performanceIndex();
-    // std::cout << "iLQR time: " << _time << " cost: " << performence.cost
-    // << std::endl;
     const Vector3f delta_input = primalSolution.inputTrajectory_.front();
     _input += delta_input;
 
-    //     const float input_xy_norm =
-    //         sqrtf(_input(0) * _input(0) + _input(1) * _input(1));
-    //     if ((_lim_acc_horizontal > FLT_EPSILON) &&
-    //         (input_xy_norm > _lim_acc_horizontal)) {
-    //       const float scale = _lim_acc_horizontal / input_xy_norm;
-    //       _input(0) *= scale;
-    //       _input(1) *= scale;
-    //     }
+    const float input_xy_norm =
+        sqrtf(_input(0) * _input(0) + _input(1) * _input(1));
+    if ((_lim_acc_horizontal > FLT_EPSILON) &&
+        (input_xy_norm > _lim_acc_horizontal)) {
+      const float scale = _lim_acc_horizontal / input_xy_norm;
+      _input(0) *= scale;
+      _input(1) *= scale;
+    }
 
-    //     _input(2) = math::constrain(_input(2), -_lim_acc_up, _lim_acc_down);
-    //     std::cout << "accel: " << _acceleration.transpose() << std::endl;
-    //     std::cout << "delta_input: " << delta_input.transpose() << std::endl;
-    //     std::cout << "input: " << _input.transpose() << std::endl;
-    //     std::cout << "vel_sp: " << _vel_sp.transpose() << std::endl;
-    //     std::cout << "vel: " << _vel.transpose() << std::endl;
+    _input(2) = math::constrain(_input(2), -_lim_acc_up, _lim_acc_down);
     ControlMath::addIfNotNanVector3f(_acc_sp, _input);
   }
   _accelerationControl();
@@ -224,7 +262,6 @@ void PositionControl::_accelerationControl() {
 
   _thr_sp = acc_thr_sp * (_hover_thrust / CONSTANTS_ONE_G);
   _thr_sp(2) = math::min(_thr_sp(2), -_lim_thr_min);
-  // std::cout << "thr_sp: " << _thr_sp.transpose() << std::endl;
 }
 
 bool PositionControl::_inputValid() {
@@ -286,8 +323,15 @@ void PositionControl::getAttitudeSetpoint(
   }
 
   attitude_setpoint.yaw_sp_move_rate = _yawspeed_sp;
-  //     std::cout << "thrust_body: " << attitude_setpoint.thrust_body[0] << " "
-  //     << attitude_setpoint.thrust_body[1] << " " <<
-  //     attitude_setpoint.thrust_body[2]
-  //     << " " << std::endl;
+  //       std::cout << "thrust_body: " << attitude_setpoint.thrust_body[0] << "
+  //       "
+  //       << attitude_setpoint.thrust_body[1] << " " <<
+  //       attitude_setpoint.thrust_body[2]
+  //       << " " << std::endl;
+}
+
+int PositionControl::print_status() {
+  PX4_INFO("iLQR size: %ld", sizeof(decltype(*_ilqr)));
+  PX4_INFO("iLQR avarage iteration: %f",(double)_ilqr->solver().averageNumIterations());
+  return 0;
 }

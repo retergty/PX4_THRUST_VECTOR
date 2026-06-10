@@ -219,6 +219,15 @@ void ThrustVectorPositionControl::parameters_update(bool force) {
 
     _control.setPositionGains(Vector3f(
         _param_mpc_xy_p.get(), _param_mpc_xy_p.get(), _param_mpc_z_p.get()));
+    _control.setAccelerationBiasEstimatorGains(
+        Vector3f(_param_mpc_abias_xy_i.get(), _param_mpc_abias_xy_i.get(),
+                 _param_mpc_abias_z_i.get()),
+        Vector3f(_param_mpc_abias_xy_lk.get(), _param_mpc_abias_xy_lk.get(),
+                 _param_mpc_abias_z_lk.get()),
+        Vector3f(_param_mpc_abias_xy_a.get(), _param_mpc_abias_xy_a.get(),
+                 _param_mpc_abias_z_a.get()));
+    _control.setAccelerationBiasLimits(_param_mpc_abias_xy_max.get(),
+                                       _param_mpc_abias_z_max.get());
     _control.setHorizontalThrustMargin(_param_mpc_thr_xy_marg.get());
     _control.decoupleHorizontalAndVecticalAcceleration(
         _param_mpc_acc_decouple.get());
@@ -576,6 +585,9 @@ void ThrustVectorPositionControl::Run() {
         Vector3f(0.f, 0.f, 100.f)
             .copyTo(_setpoint.acceleration);  // High downwards acceleration to
                                               // make sure there's no thrust
+
+        // prevent the bias estimator from learning ground-contact dynamics
+        _control.resetAccelerationBias();
       }
 
       // limit tilt during takeoff ramupup
@@ -652,6 +664,15 @@ void ThrustVectorPositionControl::Run() {
                              vehicle_local_position.vz * (1.f - weighting);
       }
 
+      if ((!PX4_ISFINITE(_setpoint.velocity[0]) ||
+           !PX4_ISFINITE(_setpoint.velocity[1])) &&
+          (!PX4_ISFINITE(_setpoint.position[0]) ||
+           !PX4_ISFINITE(_setpoint.position[1]))) {
+        // Horizontal velocity is not controlled; discard stale horizontal bias
+        // to avoid over-correction when horizontal control resumes.
+        _control.resetAccelerationBiasXY();
+      }
+
       _control.setState(states);
 
       // Run position control
@@ -691,6 +712,7 @@ void ThrustVectorPositionControl::Run() {
       _takeoff.updateTakeoffState(
           _vehicle_control_mode.flag_armed, _vehicle_land_detected.landed,
           false, 10.f, true, vehicle_local_position.timestamp_sample);
+      _control.resetAccelerationBias();
     }
 
     // Publish takeoff status
@@ -858,6 +880,10 @@ logging.
   PRINT_MODULE_USAGE_ARG("vtol", "VTOL mode", true);
   PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
 
+  return 0;
+}
+int ThrustVectorPositionControl::print_status() {
+  _control.print_status();
   return 0;
 }
 

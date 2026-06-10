@@ -48,8 +48,8 @@
 #include <iLQR/iLQR/iLQRCore.hpp>
 #include <matrix/matrix/math.hpp>
 
+#include "AccelerationBiasEstimator.hpp"
 #include "ThrustVectorFirstOrderLag.hpp"
-#include "iLQR/DDPSetting.hpp"
 #include "matrix/Vector3.hpp"
 
 struct PositionControlStates {
@@ -105,6 +105,11 @@ class PositionControl {
 
   void setAccelerationLimits(const float acc_horizontal, const float acc_up,
                              const float acc_down);
+  void setAccelerationBiasEstimatorGains(const matrix::Vector3f& Ki,
+                                         const matrix::Vector3f& leak,
+                                         const matrix::Vector3f& alpha);
+  void setAccelerationBiasLimits(const float bias_horizontal,
+                                 const float bias_vertical);
 
   /**
    * Set the minimum and maximum collective normalized thrust [0,1] that can be
@@ -192,6 +197,12 @@ class PositionControl {
    */
   bool update(const float dt);
 
+  void resetAccelerationBias() { accel_bias_estimator_.reset(); }
+  void resetAccelerationBiasXY() {
+    accel_bias_estimator_.resetAxis(0);
+    accel_bias_estimator_.resetAxis(1);
+  }
+
   /**
    * If set, the tilt setpoint is computed by assuming no vertical acceleration
    */
@@ -224,6 +235,7 @@ class PositionControl {
    */
   static const trajectory_setpoint_s empty_trajectory_setpoint;
 
+  int print_status();
  private:
   // The range limits of the hover thrust configuration/estimate
   static constexpr float HOVER_THRUST_MIN = 0.05f;
@@ -232,7 +244,7 @@ class PositionControl {
   bool _inputValid();
 
   void _positionControl();  ///< Position proportional control
-  void _velocityControl();
+  void _velocityControl(const float dt);
   void _accelerationControl();  ///< Acceleration setpoint processing
 
   // Gains
@@ -283,6 +295,7 @@ class PositionControl {
 
   matrix::Vector<float, thrust_vector_first_order_lag::STATE_DIM> _state;
   matrix::Vector<float, 3> _input;
+  AccelerationBiasEstimator<float> accel_bias_estimator_;
   thrust_vector_first_order_lag::ThrustVectorILQRSettings<float> ilqr_settings;
   thrust_vector_first_order_lag::ThrustVectorILQR<float, kPredictLength>* _ilqr{
       nullptr};

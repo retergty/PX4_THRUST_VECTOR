@@ -135,3 +135,89 @@ PARAM_DEFINE_FLOAT(MPC_Z_VEL_D_ACC, 0.f);
  * @group ThrustVector Position Control
  */
 PARAM_DEFINE_FLOAT(MPC_XY_VEL_D_ACC, 0.2f);
+
+/**
+ * Horizontal acceleration bias estimator integral gain
+ *
+ * Low-frequency integral gain that estimates the horizontal command acceleration
+ * bias needed to reject steady disturbances and model errors.
+ *
+ * @min 0
+ * @max 2
+ * @decimal 3
+ * @increment 0.01
+ * @group ThrustVector Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ABIAS_XY_I, 0.25f);
+
+/**
+ * Vertical acceleration bias estimator integral gain
+ *
+ * Low-frequency integral gain that estimates the vertical command acceleration
+ * bias needed to reject steady disturbances and model errors.
+ *
+ * @min 0
+ * @max 2
+ * @decimal 3
+ * @increment 0.01
+ * @group ThrustVector Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ABIAS_Z_I, 0.25f);
+
+/**
+ * Horizontal acceleration bias estimator leak gain
+ *
+ * Leak rate applied to the horizontal acceleration bias estimate.
+ * A non-zero value slowly removes stale bias estimates.
+ *
+ * @unit 1/s
+ * @min 0
+ * @max 1
+ * @decimal 3
+ * @increment 0.01
+ * @group ThrustVector Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ABIAS_XY_LK, 0.02f);
+
+/**
+ * Vertical acceleration bias estimator leak gain
+ *
+ * Leak rate applied to the vertical acceleration bias estimate.
+ * A non-zero value slowly removes stale bias estimates.
+ *
+ * @unit 1/s
+ * @min 0
+ * @max 1
+ * @decimal 3
+ * @increment 0.01
+ * @group ThrustVector Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ABIAS_Z_LK, 0.02f);
+
+/**
+ * Horizontal acceleration bias estimator low-pass alpha
+ *
+ * Low-pass filter alpha applied to the horizontal velocity error before bias
+ * integration. Larger values react faster and pass more noise.
+ *
+ * @min 0
+ * @max 1
+ * @decimal 3
+ * @increment 0.01
+ * @group ThrustVector Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ABIAS_XY_A, 0.05f);
+
+/**
+ * Vertical acceleration bias estimator low-pass alpha
+ *
+ * Low-pass filter alpha applied to the vertical velocity error before bias
+ * integration. Larger values react faster and pass more noise.
+ *
+ * @min 0
+ * @max 1
+ * @decimal 3
+ * @increment 0.01
+ * @group ThrustVector Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_ABIAS_Z_A, 0.05f);

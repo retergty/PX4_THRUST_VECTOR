@@ -106,10 +106,10 @@ ControlAllocationThrustVector::updateQPState()
 
 			G.setIdentity();
 
-			for (int i = 0; i < 4; ++i) {
-				G(3 * i, 3 * i) /= FzFactor;
-				G(3 * i + 1, 3 * i + 1) /= FzFactor;
-			}
+			// for (int i = 0; i < 4; ++i) {
+			// 	G(3 * i, 3 * i) /= FzFactor;
+			// 	G(3 * i + 1, 3 * i + 1) /= FzFactor;
+			// }
 
 			g0.setZero();
 
@@ -293,9 +293,9 @@ ControlAllocationThrustVector::allocate()
 	// _control_sp(4) *= 50.f;
 	// _control_sp(5) *= 50.f;
 
-	_control_sp(0) *= 3.0f;
-	_control_sp(1) *= 3.0f;
-	_control_sp(2) *= 2.5f;
+	_control_sp(0) *= 2.35f;
+	_control_sp(1) *= 2.35f;
+	_control_sp(2) *= 1.75f;
 	_control_sp(3) *= 50.f;
 	_control_sp(4) *= 50.f;
 	_control_sp(5) *= 50.f;

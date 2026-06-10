@@ -169,19 +169,25 @@ class ThrustVectorDynamicSystem final
   PreCompCache cache_;
 };
 
+// 轨迹跟踪代价：跟踪参考速度，用 R 惩罚命令加速度增量，并用 Ra
+// 惩罚下一拍命令总加速度 a_cmd_prev + delta_a_cmd 相对参考命令加速度的偏差。
 template <typename Scalar, int ArrayLength>
 class ThrustVectorTrackCost final
     : public StateInputCost<Scalar, STATE_DIM, INPUT_DIM, ArrayLength> {
  public:
   ThrustVectorTrackCost(const Matrix<Scalar, STATE_DIM, STATE_DIM>& Q,
                         const Matrix<Scalar, INPUT_DIM, INPUT_DIM>& R,
+                        const Matrix<Scalar, INPUT_DIM, INPUT_DIM>& Ra,
                         int cost_number)
       : StateInputCost<Scalar, STATE_DIM, INPUT_DIM, ArrayLength>(cost_number),
         Qv_(Q.template topLeftCorner<3, 3>()),
-        R_(R) {
+        R_(R),
+        Ra_(Ra) {
     approximation_.setZero();
     approximation_.dfdxx.template topLeftCorner<3, 3>() = Qv_;
-    approximation_.dfduu = R_;
+    approximation_.dfdxx.template slice<3, 3>(6, 6) = Ra_;
+    approximation_.dfduu = R_ + Ra_;
+    approximation_.dfdux.template slice<3, 3>(0, 6) = Ra_;
   }
 
   ~ThrustVectorTrackCost() override = default;
@@ -200,12 +206,19 @@ class ThrustVectorTrackCost final
         interpolateVelocityReference(indexAlpha, stateTrajectory);
     const Vector<Scalar, INPUT_DIM> inputDeviation =
         input - interpolateInputReference(indexAlpha, inputTrajectory);
+    const Vector<Scalar, INPUT_DIM> commandAccelerationDeviation =
+        state.template segment<3>(6) + input -
+        interpolateCommandAccelerationReference(indexAlpha, stateTrajectory);
     const Vector<Scalar, 3> weightedVelocityDeviation = Qv_ * velocityDeviation;
     const Vector<Scalar, INPUT_DIM> weightedInputDeviation =
         R_ * inputDeviation;
+    const Vector<Scalar, INPUT_DIM> weightedCommandAccelerationDeviation =
+        Ra_ * commandAccelerationDeviation;
 
     return Scalar(0.5) * velocityDeviation.dot(weightedVelocityDeviation) +
-           Scalar(0.5) * inputDeviation.dot(weightedInputDeviation);
+           Scalar(0.5) * inputDeviation.dot(weightedInputDeviation) +
+           Scalar(0.5) * commandAccelerationDeviation.dot(
+                             weightedCommandAccelerationDeviation);
   }
 
   ScalarFunctionQuadraticApproximation<Scalar, STATE_DIM, INPUT_DIM>
@@ -223,15 +236,25 @@ class ThrustVectorTrackCost final
         interpolateVelocityReference(indexAlpha, stateTrajectory);
     const Vector<Scalar, INPUT_DIM> inputDeviation =
         input - interpolateInputReference(indexAlpha, inputTrajectory);
+    const Vector<Scalar, INPUT_DIM> commandAccelerationDeviation =
+        state.template segment<3>(6) + input -
+        interpolateCommandAccelerationReference(indexAlpha, stateTrajectory);
     const Vector<Scalar, 3> weightedVelocityDeviation = Qv_ * velocityDeviation;
     const Vector<Scalar, INPUT_DIM> weightedInputDeviation =
         R_ * inputDeviation;
+    const Vector<Scalar, INPUT_DIM> weightedCommandAccelerationDeviation =
+        Ra_ * commandAccelerationDeviation;
 
     approximation_.f =
         Scalar(0.5) * velocityDeviation.dot(weightedVelocityDeviation) +
-        Scalar(0.5) * inputDeviation.dot(weightedInputDeviation);
+        Scalar(0.5) * inputDeviation.dot(weightedInputDeviation) +
+        Scalar(0.5) * commandAccelerationDeviation.dot(
+                          weightedCommandAccelerationDeviation);
     approximation_.dfdx.template head<3>() = weightedVelocityDeviation;
-    approximation_.dfdu = weightedInputDeviation;
+    approximation_.dfdx.template segment<3>(6) =
+        weightedCommandAccelerationDeviation;
+    approximation_.dfdu =
+        weightedInputDeviation + weightedCommandAccelerationDeviation;
     return approximation_;
   }
 
@@ -257,26 +280,45 @@ class ThrustVectorTrackCost final
     return LinearInterpolation::interpolate(indexAlpha, inputTrajectory);
   }
 
+  Vector<Scalar, INPUT_DIM> interpolateCommandAccelerationReference(
+      const std::pair<int, Scalar>& indexAlpha,
+      const std::array<Vector<Scalar, STATE_DIM>, ArrayLength>& stateTrajectory)
+      const {
+    return LinearInterpolation::interpolate(
+        indexAlpha, stateTrajectory,
+        [](const std::array<Vector<Scalar, STATE_DIM>, ArrayLength>& trajectory,
+           size_t index) -> Vector<Scalar, INPUT_DIM> {
+          return trajectory[index].template segment<3>(6);
+        });
+  }
+
   Matrix<Scalar, 3, 3> Qv_;
   Matrix<Scalar, INPUT_DIM, INPUT_DIM> R_;
+  Matrix<Scalar, INPUT_DIM, INPUT_DIM> Ra_;
   ScalarFunctionQuadraticApproximation<Scalar, STATE_DIM, INPUT_DIM>
       approximation_;
 };
 
+// 轨迹跟踪代价的对角版本：只使用 Q、R、Ra
+// 对角线，降低小维度问题中的矩阵运算开销。
 template <typename Scalar, int ArrayLength>
 class ThrustVectorDiagonalTrackCost final
     : public StateInputCost<Scalar, STATE_DIM, INPUT_DIM, ArrayLength> {
  public:
   ThrustVectorDiagonalTrackCost(const Matrix<Scalar, STATE_DIM, STATE_DIM>& Q,
                                 const Matrix<Scalar, INPUT_DIM, INPUT_DIM>& R,
+                                const Matrix<Scalar, INPUT_DIM, INPUT_DIM>& Ra,
                                 int cost_number)
       : StateInputCost<Scalar, STATE_DIM, INPUT_DIM, ArrayLength>(cost_number) {
     approximation_.setZero();
     for (int i = 0; i < 3; ++i) {
       QvDiagonal_(i) = Q(i, i);
       RDiagonal_(i) = R(i, i);
+      RaDiagonal_(i) = Ra(i, i);
       approximation_.dfdxx(i, i) = QvDiagonal_(i);
-      approximation_.dfduu(i, i) = RDiagonal_(i);
+      approximation_.dfdxx(i + 6, i + 6) = RaDiagonal_(i);
+      approximation_.dfduu(i, i) = RDiagonal_(i) + RaDiagonal_(i);
+      approximation_.dfdux(i, i + 6) = RaDiagonal_(i);
     }
   }
 
@@ -358,13 +400,23 @@ class ThrustVectorDiagonalTrackCost final
       const Scalar inputDeviation =
           input(i) -
           interpolateInputReferenceComponent(indexAlpha, inputTrajectory, i);
+      const Scalar commandAccelerationDeviation =
+          state(i + 6) + input(i) -
+          interpolateStateReferenceComponent(indexAlpha, stateTrajectory,
+                                             i + 6);
+      const Scalar weightedCommandAccelerationDeviation =
+          RaDiagonal_(i) * commandAccelerationDeviation;
 
-      value += QvDiagonal_(i) * velocityDeviation * velocityDeviation +
-               RDiagonal_(i) * inputDeviation * inputDeviation;
+      value +=
+          QvDiagonal_(i) * velocityDeviation * velocityDeviation +
+          RDiagonal_(i) * inputDeviation * inputDeviation +
+          commandAccelerationDeviation * weightedCommandAccelerationDeviation;
 
       if constexpr (UpdateApproximation) {
         approximation_.dfdx(i) = QvDiagonal_(i) * velocityDeviation;
-        approximation_.dfdu(i) = RDiagonal_(i) * inputDeviation;
+        approximation_.dfdx(i + 6) = weightedCommandAccelerationDeviation;
+        approximation_.dfdu(i) = RDiagonal_(i) * inputDeviation +
+                                 weightedCommandAccelerationDeviation;
       }
     }
     return Scalar(0.5) * value;
@@ -372,10 +424,12 @@ class ThrustVectorDiagonalTrackCost final
 
   Vector<Scalar, 3> QvDiagonal_;
   Vector<Scalar, INPUT_DIM> RDiagonal_;
+  Vector<Scalar, INPUT_DIM> RaDiagonal_;
   ScalarFunctionQuadraticApproximation<Scalar, STATE_DIM, INPUT_DIM>
       approximation_;
 };
 
+// 终端速度跟踪代价：在预测时域末端惩罚速度与参考速度的偏差。
 template <typename Scalar, int ArrayLength>
 class ThrustVectorTrackFinalCost final
     : public StateCost<Scalar, STATE_DIM, ArrayLength> {
@@ -435,6 +489,7 @@ class ThrustVectorTrackFinalCost final
   ScalarFunctionQuadraticApproximation<Scalar, STATE_DIM, 0> approximation_;
 };
 
+// 终端速度跟踪代价的对角版本：只使用 Qf 对角线按轴惩罚末端速度误差。
 template <typename Scalar, int ArrayLength>
 class ThrustVectorDiagonalTrackFinalCost final
     : public StateCost<Scalar, STATE_DIM, ArrayLength> {
@@ -514,6 +569,7 @@ class ThrustVectorDiagonalTrackFinalCost final
   ScalarFunctionQuadraticApproximation<Scalar, STATE_DIM, 0> approximation_;
 };
 
+// 推力方向变化代价：基于一阶滞后后的实际生效加速度，惩罚相邻时刻推力方向突变。
 template <typename Scalar, int ArrayLength>
 class ThrustDirectionChangeCost final
     : public StateInputCost<Scalar, STATE_DIM, INPUT_DIM, ArrayLength> {
@@ -721,7 +777,7 @@ class ThrustVectorReferenceTrajectoryGenerator {
   template <typename TargetTrajectory>
   void generate(const float current_time, const float time_step,
                 const matrix::Vector3f& velocity_setpoint,
-                const matrix::Vector3f& command_acceleration,
+                const matrix::Vector3f& command_acceleration_reference,
                 TargetTrajectory& targetTrajectory,
                 const matrix::Vector3f& alpha) const {
     matrix::Vector3f preview_velocity = velocity_reference_;
@@ -737,12 +793,10 @@ class ThrustVectorReferenceTrajectoryGenerator {
           current_time + static_cast<float>(i) * time_step;
       targetTrajectory.stateTrajectory[i].setZero();
       targetTrajectory.stateTrajectory[i].template head<3>() = preview_velocity;
+      targetTrajectory.stateTrajectory[i].template segment<3>(6) =
+          command_acceleration_reference;
 
-      if (i == 0) {
-        targetTrajectory.inputTrajectory[i] = -command_acceleration;
-      } else {
-        targetTrajectory.inputTrajectory[i].setZero();
-      }
+      targetTrajectory.inputTrajectory[i].setZero();
     }
   }
 
@@ -794,6 +848,7 @@ struct ThrustVectorOCPSettings {
   // 权重
   Matrix<Scalar, STATE_DIM, STATE_DIM> Q;
   Matrix<Scalar, INPUT_DIM, INPUT_DIM> R;
+  Matrix<Scalar, INPUT_DIM, INPUT_DIM> Ra;
   Matrix<Scalar, STATE_DIM, STATE_DIM> Qf;
   Scalar weight;
 
@@ -801,7 +856,7 @@ struct ThrustVectorOCPSettings {
   Scalar alpha;
 
   // 速度参考轨迹一阶低通系数
-  matrix::Vector3f referenceTrajectoryAlpha{1.f, 1.f, 1.f};
+  Vector<Scalar, 3> referenceTrajectoryAlpha{Scalar(1), Scalar(1), Scalar(1)};
 };
 
 template <typename Scalar>
@@ -816,16 +871,18 @@ class ThrustVectorOptimalControlProblem {
  public:
   using Problem_t = ThrustVectorProblem<Scalar, PredictLength>;
   using TrackCost_t =
-      ThrustVectorTrackCost<Scalar, static_cast<int>(PredictLength + 1)>;
+      ThrustVectorDiagonalTrackCost<Scalar,
+                                    static_cast<int>(PredictLength + 1)>;
   using DirectionCost_t =
       ThrustDirectionChangeCost<Scalar, static_cast<int>(PredictLength + 1)>;
   using FinalCost_t =
-      ThrustVectorTrackFinalCost<Scalar, static_cast<int>(PredictLength + 1)>;
+      ThrustVectorDiagonalTrackFinalCost<Scalar,
+                                         static_cast<int>(PredictLength + 1)>;
   using ThrustVectorDynamicSystem_t = ThrustVectorDynamicSystem<Scalar>;
 
   ThrustVectorOptimalControlProblem(
       const ThrustVectorOCPSettings<Scalar>& settings)
-      : trackCost_(settings.Q, settings.R, 0),
+      : trackCost_(settings.Q, settings.R, settings.Ra, 0),
         directionCost_(settings.alpha, settings.weight, 1),
         finalCost_(settings.Qf, 0),
         dynamics_(settings.alpha) {
@@ -937,13 +994,11 @@ class ThrustVectorILQR
     referenceTrajectoryGenerator_.reset(current_velocity);
   }
 
-  void setDesireTrajectory(const float current_time,
-                           const matrix::Vector3f& vel_sp,
-                           const matrix::Vector3f& current_velocity,
-                           const matrix::Vector3f& current_effective_accel,
-                           const matrix::Vector3f& last_command_accel) {
+  void setDesireTrajectory(
+      const float current_time, const matrix::Vector3f& vel_sp,
+      const matrix::Vector3f& current_velocity,
+      const matrix::Vector3f& command_acceleration_reference) {
     auto& targetTrajectory = solver_.targetTrajectory();
-    (void)current_effective_accel;
 
     if (!referenceTrajectoryGenerator_.initialized()) {
       referenceTrajectoryGenerator_.reset(current_velocity);
@@ -951,22 +1006,15 @@ class ThrustVectorILQR
 
     referenceTrajectoryGenerator_.generate(
         current_time, solver_.ddpSettings().timeStep, vel_sp,
-        last_command_accel, targetTrajectory, referenceTrajectoryAlpha_);
+        command_acceleration_reference, targetTrajectory,
+        referenceTrajectoryAlpha_);
     referenceTrajectoryGenerator_.update(vel_sp, referenceTrajectoryAlpha_);
-  }
-
-  void setDesireTrajectory(const float current_time,
-                           const matrix::Vector3f& vel_sp,
-                           const matrix::Vector3f& current_velocity,
-                           const matrix::Vector3f& last_command_accel) {
-    setDesireTrajectory(current_time, vel_sp, current_velocity,
-                        last_command_accel, last_command_accel);
   }
 
  private:
   ThrustVectorReferenceTrajectoryGenerator referenceTrajectoryGenerator_;
   Scalar alpha_;
-  matrix::Vector3f referenceTrajectoryAlpha_;
+  Vector<Scalar, 3> referenceTrajectoryAlpha_;
   HoverInitializer_t initializer_;
   Solver_t solver_;
 };
