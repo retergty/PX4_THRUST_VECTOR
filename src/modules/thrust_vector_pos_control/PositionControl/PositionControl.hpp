@@ -84,9 +84,9 @@ struct PositionControlStates {
 class PositionControl {
  public:
   static constexpr size_t kPredictLength = 25;
-  static constexpr float kTimeStep = 1.f / 125.f;
+  static constexpr float kTimeStep = 1.f / 100.f;
   PositionControl();
-  ~PositionControl() { delete _ilqr; }
+  ~PositionControl();
 
   /**
    * Set the position control gains
@@ -158,9 +158,7 @@ class PositionControl {
   void setState(const PositionControlStates& states);
 
   void resetReferenceTrajectory() {
-    if (_ilqr != nullptr) {
-      _ilqr->resetReferenceTrajectory(_vel, _acceleration);
-    }
+    _ilqr.resetReferenceTrajectory(_vel, _acceleration);
   }
 
   /**
@@ -236,6 +234,7 @@ class PositionControl {
   static const trajectory_setpoint_s empty_trajectory_setpoint;
 
   int print_status();
+
  private:
   // The range limits of the hover thrust configuration/estimate
   static constexpr float HOVER_THRUST_MIN = 0.05f;
@@ -297,6 +296,5 @@ class PositionControl {
   matrix::Vector<float, 3> _input;
   AccelerationBiasEstimator<float> accel_bias_estimator_;
   thrust_vector_first_order_lag::ThrustVectorILQRSettings<float> ilqr_settings;
-  thrust_vector_first_order_lag::ThrustVectorILQR<float, kPredictLength>* _ilqr{
-      nullptr};
+  thrust_vector_first_order_lag::ThrustVectorILQR<float, kPredictLength> _ilqr;
 };

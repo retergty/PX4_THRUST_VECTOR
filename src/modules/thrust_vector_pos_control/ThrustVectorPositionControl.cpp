@@ -38,6 +38,11 @@
 #include <px4_platform_common/events.h>
 
 #include <lib/matrix/matrix/math.hpp>
+#include <new>
+
+#if defined(__PX4_NUTTX)
+#include <stm32_dtcm.h>
+#endif
 
 #include "PositionControl/ControlMath.hpp"
 
@@ -48,17 +53,53 @@ ThrustVectorPositionControl::ThrustVectorPositionControl()
       ScheduledWorkItem(MODULE_NAME,
                         px4::wq_configurations::nav_and_controllers),
       _vehicle_attitude_setpoint_pub(ORB_ID(vehicle_attitude_setpoint)) {
+#if defined(__PX4_NUTTX)
+  void* control_storage = dtcm_malloc(sizeof(PositionControl));
+
+  if (control_storage != nullptr) {
+    _control = new (control_storage) PositionControl();
+    PX4_INFO("PositionControl DTCM allocation: %u bytes @ %p",
+             (unsigned)sizeof(PositionControl), _control);
+
+  } else {
+    PX4_ERR("PositionControl DTCM allocation failed: %u bytes",
+            (unsigned)sizeof(PositionControl));
+  }
+
+#else
+  _control = new PositionControl();
+#endif
+
   _sample_interval_s.update(0.01f);  // 100 Hz default
-  parameters_update(true);
+
+  if (_control != nullptr) {
+    parameters_update(true);
+  }
+
   _tilt_limit_slew_rate.setSlewRate(.2f);
   _takeoff_status_pub.advertise();
 }
 
 ThrustVectorPositionControl::~ThrustVectorPositionControl() {
+  if (_control != nullptr) {
+#if defined(__PX4_NUTTX)
+    _control->~PositionControl();
+    dtcm_free(_control);
+#else
+    delete _control;
+#endif
+    _control = nullptr;
+  }
+
   perf_free(_cycle_perf);
 }
 
 bool ThrustVectorPositionControl::init() {
+  if (_control == nullptr) {
+    PX4_ERR("PositionControl unavailable");
+    return false;
+  }
+
   if (!_local_pos_sub.registerCallback()) {
     PX4_ERR("callback registration failed");
     return false;
@@ -217,19 +258,19 @@ void ThrustVectorPositionControl::parameters_update(bool force) {
           _param_mpc_tiltmax_air.get());
     }
 
-    _control.setPositionGains(Vector3f(
+    _control->setPositionGains(Vector3f(
         _param_mpc_xy_p.get(), _param_mpc_xy_p.get(), _param_mpc_z_p.get()));
-    _control.setAccelerationBiasEstimatorGains(
+    _control->setAccelerationBiasEstimatorGains(
         Vector3f(_param_mpc_abias_xy_i.get(), _param_mpc_abias_xy_i.get(),
                  _param_mpc_abias_z_i.get()),
         Vector3f(_param_mpc_abias_xy_lk.get(), _param_mpc_abias_xy_lk.get(),
                  _param_mpc_abias_z_lk.get()),
         Vector3f(_param_mpc_abias_xy_a.get(), _param_mpc_abias_xy_a.get(),
                  _param_mpc_abias_z_a.get()));
-    _control.setAccelerationBiasLimits(_param_mpc_abias_xy_max.get(),
-                                       _param_mpc_abias_z_max.get());
-    _control.setHorizontalThrustMargin(_param_mpc_thr_xy_marg.get());
-    _control.decoupleHorizontalAndVecticalAcceleration(
+    _control->setAccelerationBiasLimits(_param_mpc_abias_xy_max.get(),
+                                        _param_mpc_abias_z_max.get());
+    _control->setHorizontalThrustMargin(_param_mpc_thr_xy_marg.get());
+    _control->decoupleHorizontalAndVecticalAcceleration(
         _param_mpc_acc_decouple.get());
 
     // Check that the design parameters are inside the absolute maximum
@@ -338,7 +379,7 @@ void ThrustVectorPositionControl::parameters_update(bool force) {
     }
 
     if (!_param_mpc_use_hte.get() || !_hover_thrust_initialized) {
-      _control.setHoverThrust(_param_mpc_thr_hover.get());
+      _control->setHoverThrust(_param_mpc_thr_hover.get());
       _hover_thrust_initialized = true;
     }
 
@@ -479,7 +520,7 @@ void ThrustVectorPositionControl::Run() {
 
       if (_hover_thrust_estimate_sub.update(&hte)) {
         if (hte.valid) {
-          _control.updateHoverThrust(hte.hover_thrust);
+          _control->updateHoverThrust(hte.hover_thrust);
         }
       }
     }
@@ -569,7 +610,7 @@ void ThrustVectorPositionControl::Run() {
           (flying && _vehicle_land_detected.ground_contact);
 
       if (!flying) {
-        _control.setHoverThrust(_param_mpc_thr_hover.get());
+        _control->setHoverThrust(_param_mpc_thr_hover.get());
       }
 
       // make sure takeoff ramp is not amended by acceleration feed-forward
@@ -587,7 +628,7 @@ void ThrustVectorPositionControl::Run() {
                                               // make sure there's no thrust
 
         // prevent the bias estimator from learning ground-contact dynamics
-        _control.resetAccelerationBias();
+        _control->resetAccelerationBias();
       }
 
       // limit tilt during takeoff ramupup
@@ -595,7 +636,7 @@ void ThrustVectorPositionControl::Run() {
           (_takeoff.getTakeoffState() < TakeoffState::flight)
               ? _param_mpc_tiltmax_lnd.get()
               : _param_mpc_tiltmax_air.get();
-      _control.setTiltLimit(
+      _control->setTiltLimit(
           _tilt_limit_slew_rate.update(math::radians(tilt_limit_deg), dt));
 
       const float speed_up =
@@ -608,7 +649,7 @@ void ThrustVectorPositionControl::Run() {
 
       // Allow ramping from zero thrust on takeoff
       const float minimum_thrust = flying ? _param_mpc_thr_min.get() : 0.f;
-      _control.setThrustLimits(minimum_thrust, _param_mpc_thr_max.get());
+      _control->setThrustLimits(minimum_thrust, _param_mpc_thr_max.get());
 
       float max_speed_xy = _param_mpc_xy_vel_max.get();
 
@@ -616,35 +657,35 @@ void ThrustVectorPositionControl::Run() {
         max_speed_xy = math::min(max_speed_xy, vehicle_local_position.vxy_max);
       }
 
-      _control.setVelocityLimits(
+      _control->setVelocityLimits(
           max_speed_xy,
           math::min(speed_up,
                     _param_mpc_z_vel_max_up.get()),  // takeoff ramp starts with
                                                      // negative velocity limit
           math::max(speed_down, 0.f));
-      _control.setAccelerationLimits(_param_mpc_acc_hor_max.get(),
-                                     _param_mpc_acc_up_max.get(),
-                                     _param_mpc_acc_down_max.get());
+      _control->setAccelerationLimits(_param_mpc_acc_hor_max.get(),
+                                      _param_mpc_acc_up_max.get(),
+                                      _param_mpc_acc_down_max.get());
 
       if (!std::isnan(_roll_pitch_sp.pitch)) {
         _pitch_setpoint_filter.update(_roll_pitch_sp.pitch);
-        _control.setPitchSetpoint(_pitch_setpoint_filter.getState());
+        _control->setPitchSetpoint(_pitch_setpoint_filter.getState());
 
       } else {
         _pitch_setpoint_filter.reset(0.0);
-        _control.setPitchSetpoint(NAN);
+        _control->setPitchSetpoint(NAN);
       }
 
       if (!std::isnan(_roll_pitch_sp.roll)) {
         _roll_setpoint_filter.update(_roll_pitch_sp.roll);
-        _control.setRollSetpoint(_roll_setpoint_filter.getState());
+        _control->setRollSetpoint(_roll_setpoint_filter.getState());
 
       } else {
         _roll_setpoint_filter.reset(0.0);
-        _control.setRollSetpoint(NAN);
+        _control->setRollSetpoint(NAN);
       }
 
-      _control.setInputSetpoint(_setpoint);
+      _control->setInputSetpoint(_setpoint);
 
       // update states
       if (!PX4_ISFINITE(_setpoint.position[2]) &&
@@ -670,25 +711,25 @@ void ThrustVectorPositionControl::Run() {
            !PX4_ISFINITE(_setpoint.position[1]))) {
         // Horizontal velocity is not controlled; discard stale horizontal bias
         // to avoid over-correction when horizontal control resumes.
-        _control.resetAccelerationBiasXY();
+        _control->resetAccelerationBiasXY();
       }
 
-      _control.setState(states);
+      _control->setState(states);
 
       // Run position control
-      if (!_control.update(dt)) {
+      if (!_control->update(dt)) {
         // Failsafe
         _vehicle_constraints = {0, NAN, NAN, false, {}};  // reset constraints
 
-        _control.setInputSetpoint(generateFailsafeSetpoint(
+        _control->setInputSetpoint(generateFailsafeSetpoint(
             vehicle_local_position.timestamp_sample, states, true));
-        _control.setVelocityLimits(_param_mpc_xy_vel_max.get(),
-                                   _param_mpc_z_vel_max_up.get(),
-                                   _param_mpc_z_vel_max_dn.get());
-        _control.setAccelerationLimits(_param_mpc_acc_hor_max.get(),
-                                       _param_mpc_acc_up_max.get(),
-                                       _param_mpc_acc_down_max.get());
-        _control.update(dt);
+        _control->setVelocityLimits(_param_mpc_xy_vel_max.get(),
+                                    _param_mpc_z_vel_max_up.get(),
+                                    _param_mpc_z_vel_max_dn.get());
+        _control->setAccelerationLimits(_param_mpc_acc_hor_max.get(),
+                                        _param_mpc_acc_up_max.get(),
+                                        _param_mpc_acc_down_max.get());
+        _control->update(dt);
       }
 
       // Publish internal position control setpoints
@@ -696,13 +737,13 @@ void ThrustVectorPositionControl::Run() {
       // corrections This message is used by other modules (such as
       // Landdetector) to determine vehicle intention.
       vehicle_local_position_setpoint_s local_pos_sp{};
-      _control.getLocalPositionSetpoint(local_pos_sp);
+      _control->getLocalPositionSetpoint(local_pos_sp);
       local_pos_sp.timestamp = hrt_absolute_time();
       _local_pos_sp_pub.publish(local_pos_sp);
 
       // Publish attitude setpoint output
       vehicle_attitude_setpoint_s attitude_setpoint{};
-      _control.getAttitudeSetpoint(attitude_setpoint);
+      _control->getAttitudeSetpoint(attitude_setpoint);
       attitude_setpoint.timestamp = hrt_absolute_time();
       _vehicle_attitude_setpoint_pub.publish(attitude_setpoint);
 
@@ -712,7 +753,7 @@ void ThrustVectorPositionControl::Run() {
       _takeoff.updateTakeoffState(
           _vehicle_control_mode.flag_armed, _vehicle_land_detected.landed,
           false, 10.f, true, vehicle_local_position.timestamp_sample);
-      _control.resetAccelerationBias();
+      _control->resetAccelerationBias();
     }
 
     // Publish takeoff status
@@ -883,7 +924,13 @@ logging.
   return 0;
 }
 int ThrustVectorPositionControl::print_status() {
-  _control.print_status();
+  if (_control != nullptr) {
+    _control->print_status();
+
+  } else {
+    PX4_ERR("PositionControl unavailable");
+  }
+
   return 0;
 }
 

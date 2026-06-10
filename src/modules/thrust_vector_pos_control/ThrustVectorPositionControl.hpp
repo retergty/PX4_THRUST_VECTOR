@@ -240,7 +240,7 @@ class ThrustVectorPositionControl
   AlphaFilter<matrix::Vector2f> _vel_deriv_xy_lp_filter{};
   AlphaFilter<float> _vel_deriv_z_lp_filter{};
 
-  PositionControl _control;  ///< class for core PID position control
+  PositionControl* _control{nullptr};  ///< class for core PID position control
 
   hrt_abstime _last_warn{
       0}; /**< timer when the last warn message was sent out */

@@ -51,13 +51,14 @@
 
 using namespace matrix;
 
-const trajectory_setpoint_s PositionControl::empty_trajectory_setpoint = {
-    0,  {NAN, NAN, NAN}, {NAN, NAN, NAN}, {NAN, NAN, NAN}, {NAN, NAN, NAN}, NAN,
-    NAN};
+namespace {
 
-PositionControl::PositionControl() {
+thrust_vector_first_order_lag::ThrustVectorILQRSettings<float>
+makeILQRSettings() {
+  thrust_vector_first_order_lag::ThrustVectorILQRSettings<float> settings{};
   thrust_vector_first_order_lag::ThrustVectorOCPSettings<float>& ocp_settings =
-      ilqr_settings.ocpSettings;
+      settings.ocpSettings;
+
   ocp_settings.Q.setZero();
   ocp_settings.Q.template topLeftCorner<3, 3>().setIdentity();
   ocp_settings.Q *= 2.0f;
@@ -71,21 +72,30 @@ PositionControl::PositionControl() {
   ocp_settings.alpha = 0.3;
   ocp_settings.referenceTrajectoryAlpha = matrix::Vector3f{0.4f, 0.4f, 0.6f};
 
-  DDPSettings<float>& ddp_settings = ilqr_settings.ddpSettings;
-
-  ddp_settings.timeStep = kTimeStep;
+  DDPSettings<float>& ddp_settings = settings.ddpSettings;
+  ddp_settings.timeStep = PositionControl::kTimeStep;
   ddp_settings.maxNumIterations = 3;
+  ddp_settings.lineSearch.minStepLength = 0.2f;
 
+  return settings;
+}
+
+}  // namespace
+
+const trajectory_setpoint_s PositionControl::empty_trajectory_setpoint = {
+    0,  {NAN, NAN, NAN}, {NAN, NAN, NAN}, {NAN, NAN, NAN}, {NAN, NAN, NAN}, NAN,
+    NAN};
+
+PositionControl::PositionControl()
+    : ilqr_settings(makeILQRSettings()), _ilqr(ilqr_settings) {
   setAccelerationLimits(5.f, 8.f, 8.f);
-
-  _ilqr = new thrust_vector_first_order_lag::ThrustVectorILQR<float,
-                                                              kPredictLength>(
-      ilqr_settings);
 
   _state.setZero();
   _input.setZero();
   _acceleration.setZero();
 }
+
+PositionControl::~PositionControl() = default;
 
 void PositionControl::setVelocityLimits(const float vel_horizontal,
                                         const float vel_up,
@@ -253,6 +263,26 @@ void PositionControl::_velocityControl(const float dt) {
     _input(2) = math::constrain(_input(2), -_lim_acc_up, _lim_acc_down);
     ControlMath::addIfNotNanVector3f(_acc_sp, _input);
   }
+
+  //   ControlMath::setZeroIfNanVector3f(_vel_sp);
+  //   ControlMath::setZeroIfNanVector3f(_vel);
+  //   ControlMath::setZeroIfNanVector3f(_acceleration);
+
+  //   _vel.setZero();
+  //   _vel_sp.setZero();
+  //   _acceleration.setZero();
+  //   _vel_sp = matrix::Vector<float, 3>{0.0118f, -0.008f, 2.45166f};
+  //   _ilqr.setDesireTrajectory(_time, _vel_sp, _vel,
+  //   accel_bias_estimator_.bias());
+
+  //   _state.template head<3>() = _vel;
+  //   _state.template segment<3>(3) = _acceleration;
+  //   _state.template segment<3>(6) = _input;
+  //   _ilqr.solver().run(_time, _state);
+
+  //   const auto& primalSolution = _ilqr.solver().primalSolution();
+  //   const Vector3f delta_input = primalSolution.inputTrajectory_.front();
+  //   _input += delta_input;
   _accelerationControl();
 }
 
@@ -331,7 +361,9 @@ void PositionControl::getAttitudeSetpoint(
 }
 
 int PositionControl::print_status() {
-  PX4_INFO("iLQR size: %ld", sizeof(decltype(*_ilqr)));
-  PX4_INFO("iLQR avarage iteration: %f",(double)_ilqr->solver().averageNumIterations());
+  PX4_INFO("iLQR size: %d", (int)sizeof(_ilqr));
+  PX4_INFO("iLQR avarage iteration: %f",
+           (double)_ilqr.solver().averageNumIterations());
+
   return 0;
 }

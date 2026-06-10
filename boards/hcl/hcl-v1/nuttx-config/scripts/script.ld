@@ -165,6 +165,7 @@ SECTIONS
 	.itcm_code : {
 		_start_itcm = ABSOLUTE(.);
 		. = ALIGN(4);
+		*thrust_vector_pos_control.a:*(.text* .rodata*)
 		*control_allocator.a:*(.text* .rodata*)
 		*ControlAllocation.a:*(.text* .rodata*)
 		*vehicle_angular_velocity.a:*(.text* .rodata*)
