@@ -6,21 +6,23 @@
 #include <cstddef>
 #include <limits>
 
+#include "AugmentedLagrangian/StateInputAugmentedLagrangian.hpp"
+#include "Constraint/StateInputConstraint.hpp"
 #include "Cost/Cost.hpp"
 #include "Dynamics/DiscreteSystemDynamicsBase.hpp"
 #include "Initialization/Initializer.hpp"
 #include "Misc/LinearInterpolation.hpp"
 #include "OptimalControl/OptimalControlProblem.hpp"
+#include "Penalties/SlacknessSquaredHingePenalty.hpp"
 #include "iLQR/DDPSetting.hpp"
 #include "iLQR/LinearAlgebraTypes.hpp"
 #include "iLQR/iLQR.hpp"
 #include "iLQR/iLQRDescriptor.hpp"
-
 /******************************************************************************************************/
 /******************************************************************************************************/
 /******************************************************************************************************/
 /**
- * 该示例定义了带一阶低通执行器的速度外环离散最优控制问题（无约束版本）。
+ * 该示例定义了带一阶低通执行器的速度外环离散最优控制问题（有约束版本）。
  *
  * 当前模型不是完整的矢量推力无人机刚体动力学，而是在预测时域内
  * 姿态已知且近似不变时的 NED 平动增量 MPC 模型；为描述内环、电机或
@@ -38,22 +40,32 @@
  * 推力方向变化代价基于实际生效总加速度 a_eff（非命令加速度），先减去重力
  * 得到推力加速度，惩罚相邻两拍推力方向变化；低推力区通过门控权重减弱该代价。
  *
- * 注意：本文件对应无约束模型，不接入任何增广拉格朗日约束项。
- * 若需要推力锥约束、椭球约束与 z 轴最小值约束，请使用
- * `ThrustVectorFirstOrderLagConstrain.hpp`。
+ * 与无约束版本不同，本文件通过增广拉格朗日接入了 state-input 不等式约束：
+ * 1) 推力命令加速度锥约束 + 命令总加速度椭球约束（2 维 term）
+ * 2) 推力命令加速度 z 轴最小值约束（1 维 term）
  */
 
-namespace thrust_vector_first_order_lag {
+namespace tvfol_constrain {
 static constexpr int STATE_DIM = 9;
 static constexpr int INPUT_DIM = 3;
 static constexpr float kGravity = 9.80665f;
+
+template <typename Scalar>
+using ThrustVectorConstraintConfig = ConstraintConfig<
+    StateConstraintConfig<ConstraintLayout<>>,
+    StateInputConstraintConfig<ConstraintLayout<
+        ConstraintGroupLayout<>,
+        ConstraintGroupLayout<ConstraintTerm<2>, ConstraintTerm<1>>>>,
+    FinalStateConstraintConfig<ConstraintLayout<>>>;
+
+// 有约束问题类型：中间阶段包含 2 个 state-input 不等式 term，
+// 分别为 [锥+椭球] 与 [z 轴最小值]。
 template <typename Scalar, size_t PredictLength>
 using ThrustVectorProblem = OptimalControlProblem<
     Scalar,
     TranscriptionConfig<Dimensions<STATE_DIM, INPUT_DIM>,
                         Horizon<PredictLength>, DiscreteDynamics>,
-    ConstraintConfig<>>;
-// 无约束问题类型：不包含状态约束、状态-输入约束和终端约束项。
+    ThrustVectorConstraintConfig<Scalar>>;
 
 template <typename Scalar>
 class ThrustVectorDynamicSystem final
@@ -744,6 +756,284 @@ class ThrustDirectionChangeCost final
   const Vector<Scalar, 3> gravityVector_;
 };
 
+// 命令加速度约束：锥约束使用推力命令加速度 a_T,cmd = a_cmd - g * e3，
+// 椭球约束使用命令总加速度 a_cmd = x(6:8) + u。
+template <typename Scalar>
+class ThrustCommandAccelerationConstraint final
+    : public StateInputConstraint<Scalar, STATE_DIM, INPUT_DIM, 2> {
+ public:
+  struct Config {
+    Scalar maxTiltAngleRad{Scalar(0.7853981633974483)};  // 默认 45 deg。
+    Scalar axMax{Scalar(6.0)};           // 总加速度椭球 x 轴半径。
+    Scalar ayMax{Scalar(6.0)};           // 总加速度椭球 y 轴半径。
+    Scalar azMax{Scalar(6.0)};           // 总加速度椭球 z 轴半径。
+    Scalar coneSmoothing{Scalar(1e-6)};  // 锥约束平滑项 epsilon。
+  };
+
+  explicit ThrustCommandAccelerationConstraint(const Config& config)
+      : StateInputConstraint<Scalar, STATE_DIM, INPUT_DIM, 2>(
+            ConstraintOrder::Quadratic),
+        tanMaxTiltAngle_(std::tan(config.maxTiltAngleRad)),
+        inverseAxMaxSquared_(Scalar(1) / (config.axMax * config.axMax)),
+        inverseAyMaxSquared_(Scalar(1) / (config.ayMax * config.ayMax)),
+        inverseAzMaxSquared_(Scalar(1) / (config.azMax * config.azMax)),
+        coneSmoothing_(config.coneSmoothing),
+        gravity_(Scalar(kGravity)) {
+    assert(config.maxTiltAngleRad > Scalar(0));
+    assert(config.maxTiltAngleRad < Scalar(1.5707963267948966));
+    assert(config.axMax > Scalar(0));
+    assert(config.ayMax > Scalar(0));
+    assert(config.azMax > Scalar(0));
+    assert(config.coneSmoothing > Scalar(0));
+  }
+
+  ~ThrustCommandAccelerationConstraint() override = default;
+
+  Vector<Scalar, 2> getValue(
+      const Scalar time, const Vector<Scalar, STATE_DIM>& state,
+      const Vector<Scalar, INPUT_DIM>& input) const override {
+    (void)time;
+
+    const CommandAcceleration aCmd = commandAcceleration(state, input);
+    const CommandThrustAcceleration aT = commandThrustAcceleration(aCmd);
+    const Scalar radialNorm =
+        std::sqrt(aT.ax * aT.ax + aT.ay * aT.ay + coneSmoothing_);
+
+    Vector<Scalar, 2> value;
+    // h_cone >= 0: sqrt(t_x^2 + t_y^2) <= -tan(theta) * t_z
+    value(0) = -tanMaxTiltAngle_ * aT.az - radialNorm;
+    // h_ellip >= 0: total command acceleration stays inside the ellipsoid.
+    value(1) = Scalar(1) - inverseAxMaxSquared_ * aCmd.ax * aCmd.ax -
+               inverseAyMaxSquared_ * aCmd.ay * aCmd.ay -
+               inverseAzMaxSquared_ * aCmd.az * aCmd.az;
+    return value;
+  }
+
+  VectorFunctionQuadraticApproximation<Scalar, 2, STATE_DIM, INPUT_DIM>
+  getQuadraticApproximation(
+      const Scalar time, const Vector<Scalar, STATE_DIM>& state,
+      const Vector<Scalar, INPUT_DIM>& input) const override {
+    (void)time;
+
+    VectorFunctionQuadraticApproximation<Scalar, 2, STATE_DIM, INPUT_DIM>
+        approximation;
+    approximation.setZero();
+    approximation.f = getValue(time, state, input);
+
+    const CommandAcceleration aCmd = commandAcceleration(state, input);
+    const CommandThrustAcceleration aT = commandThrustAcceleration(aCmd);
+
+    // ----- 约束 0：锥约束 h_cone -----
+    const Scalar radialNormSquared =
+        aT.ax * aT.ax + aT.ay * aT.ay + coneSmoothing_;
+    const Scalar radialNorm = std::sqrt(radialNormSquared);
+    const Scalar inverseRadialNorm = Scalar(1) / radialNorm;
+    const Scalar inverseRadialNormCubed =
+        inverseRadialNorm * inverseRadialNorm * inverseRadialNorm;
+
+    const Scalar coneDax = -aT.ax * inverseRadialNorm;
+    const Scalar coneDay = -aT.ay * inverseRadialNorm;
+    const Scalar coneDaz = -tanMaxTiltAngle_;
+
+    const Scalar coneDaxDax =
+        -inverseRadialNorm + aT.ax * aT.ax * inverseRadialNormCubed;
+    const Scalar coneDayDay =
+        -inverseRadialNorm + aT.ay * aT.ay * inverseRadialNormCubed;
+    const Scalar coneDaxDay = aT.ax * aT.ay * inverseRadialNormCubed;
+
+    approximation.dfdx(0, 6) = coneDax;
+    approximation.dfdx(0, 7) = coneDay;
+    approximation.dfdx(0, 8) = coneDaz;
+    approximation.dfdu(0, 0) = coneDax;
+    approximation.dfdu(0, 1) = coneDay;
+    approximation.dfdu(0, 2) = coneDaz;
+
+    approximation.dfdxx[0](6, 6) = coneDaxDax;
+    approximation.dfdxx[0](7, 7) = coneDayDay;
+    approximation.dfdxx[0](6, 7) = coneDaxDay;
+    approximation.dfdxx[0](7, 6) = coneDaxDay;
+
+    approximation.dfduu[0](0, 0) = coneDaxDax;
+    approximation.dfduu[0](1, 1) = coneDayDay;
+    approximation.dfduu[0](0, 1) = coneDaxDay;
+    approximation.dfduu[0](1, 0) = coneDaxDay;
+
+    approximation.dfdux[0](0, 6) = coneDaxDax;
+    approximation.dfdux[0](1, 7) = coneDayDay;
+    approximation.dfdux[0](0, 7) = coneDaxDay;
+    approximation.dfdux[0](1, 6) = coneDaxDay;
+
+    // ----- 约束 1：椭球约束 h_ellip（总加速度） -----
+    const Scalar ellipDax = -Scalar(2) * inverseAxMaxSquared_ * aCmd.ax;
+    const Scalar ellipDay = -Scalar(2) * inverseAyMaxSquared_ * aCmd.ay;
+    const Scalar ellipDaz = -Scalar(2) * inverseAzMaxSquared_ * aCmd.az;
+
+    const Scalar ellipDaxDax = -Scalar(2) * inverseAxMaxSquared_;
+    const Scalar ellipDayDay = -Scalar(2) * inverseAyMaxSquared_;
+    const Scalar ellipDazDaz = -Scalar(2) * inverseAzMaxSquared_;
+
+    approximation.dfdx(1, 6) = ellipDax;
+    approximation.dfdx(1, 7) = ellipDay;
+    approximation.dfdx(1, 8) = ellipDaz;
+    approximation.dfdu(1, 0) = ellipDax;
+    approximation.dfdu(1, 1) = ellipDay;
+    approximation.dfdu(1, 2) = ellipDaz;
+
+    approximation.dfdxx[1](6, 6) = ellipDaxDax;
+    approximation.dfdxx[1](7, 7) = ellipDayDay;
+    approximation.dfdxx[1](8, 8) = ellipDazDaz;
+
+    approximation.dfduu[1](0, 0) = ellipDaxDax;
+    approximation.dfduu[1](1, 1) = ellipDayDay;
+    approximation.dfduu[1](2, 2) = ellipDazDaz;
+
+    approximation.dfdux[1](0, 6) = ellipDaxDax;
+    approximation.dfdux[1](1, 7) = ellipDayDay;
+    approximation.dfdux[1](2, 8) = ellipDazDaz;
+
+    return approximation;
+  }
+
+ private:
+  struct CommandAcceleration {
+    Scalar ax;
+    Scalar ay;
+    Scalar az;
+  };
+
+  struct CommandThrustAcceleration {
+    Scalar ax;
+    Scalar ay;
+    Scalar az;
+  };
+
+  static CommandAcceleration commandAcceleration(
+      const Vector<Scalar, STATE_DIM>& state,
+      const Vector<Scalar, INPUT_DIM>& input) {
+    return {state(6) + input(0), state(7) + input(1), state(8) + input(2)};
+  }
+
+  CommandThrustAcceleration commandThrustAcceleration(
+      const CommandAcceleration& commandAcceleration) const {
+    return {commandAcceleration.ax, commandAcceleration.ay,
+            commandAcceleration.az - gravity_};
+  }
+
+  Scalar tanMaxTiltAngle_;
+  Scalar inverseAxMaxSquared_;
+  Scalar inverseAyMaxSquared_;
+  Scalar inverseAzMaxSquared_;
+  Scalar coneSmoothing_;
+  Scalar gravity_;
+};
+
+// 推力命令加速度线性约束：z 轴最小值约束（防反推）。
+// 约束对象为 a_T,cmd = a_cmd - g * e3，其中 a_cmd = x(6:8) + u。
+template <typename Scalar>
+class ThrustCommandAccelerationZMinConstraint final
+    : public StateInputConstraint<Scalar, STATE_DIM, INPUT_DIM, 1> {
+ public:
+  struct Config {
+    Scalar zMin{Scalar(-0.01)};  // h_z >= 0: zMin - a_T,cmd,z
+  };
+
+  explicit ThrustCommandAccelerationZMinConstraint(const Config& config)
+      : StateInputConstraint<Scalar, STATE_DIM, INPUT_DIM, 1>(
+            ConstraintOrder::Linear),
+        zMin_(config.zMin),
+        gravity_(Scalar(kGravity)) {}
+
+  ~ThrustCommandAccelerationZMinConstraint() override = default;
+
+  Vector<Scalar, 1> getValue(
+      const Scalar time, const Vector<Scalar, STATE_DIM>& state,
+      const Vector<Scalar, INPUT_DIM>& input) const override {
+    (void)time;
+    Vector<Scalar, 1> value;
+    value(0) = zMin_ - commandThrustAccelerationZ(state, input);
+    return value;
+  }
+
+  VectorFunctionLinearApproximation<Scalar, 1, STATE_DIM, INPUT_DIM>
+  getLinearApproximation(
+      const Scalar time, const Vector<Scalar, STATE_DIM>& state,
+      const Vector<Scalar, INPUT_DIM>& input) const override {
+    VectorFunctionLinearApproximation<Scalar, 1, STATE_DIM, INPUT_DIM>
+        approximation;
+    approximation.setZero();
+    approximation.f = getValue(time, state, input);
+    approximation.dfdx(0, 8) = Scalar(-1);
+    approximation.dfdu(0, 2) = Scalar(-1);
+    return approximation;
+  }
+
+ private:
+  Scalar commandThrustAccelerationZ(
+      const Vector<Scalar, STATE_DIM>& state,
+      const Vector<Scalar, INPUT_DIM>& input) const {
+    return state(8) + input(2) - gravity_;
+  }
+
+  Scalar zMin_;
+  Scalar gravity_;
+};
+
+template <typename Scalar>
+struct ThrustCommandAccelerationConstraintSettings {
+  typename ThrustCommandAccelerationConstraint<Scalar>::Config constraint;
+  typename ThrustCommandAccelerationZMinConstraint<Scalar>::Config
+      zMinConstraint;
+  typename SlacknessSquaredHingePenalty<Scalar>::Config constraintPenalty{
+      Scalar(10.0), Scalar(1.0)};
+  typename SlacknessSquaredHingePenalty<Scalar>::Config zMinPenalty{
+      Scalar(10.0), Scalar(1.0)};
+};
+
+// 命令加速度不等式约束的增广拉格朗日封装：
+// - term 0：推力锥约束 + 总加速度椭球约束（2 维）
+// - term 1：z 轴最小值约束（1 维）
+template <typename Scalar>
+class ThrustCommandAccelerationAugmentedLagrangian final {
+ public:
+  using Constraint_t = ThrustCommandAccelerationConstraint<Scalar>;
+  using ZMinConstraint_t = ThrustCommandAccelerationZMinConstraint<Scalar>;
+  using Penalty_t = SlacknessSquaredHingePenalty<Scalar>;
+  using ConstraintAugmentedLagrangian_t =
+      StateInputAugmentedLagrangian<Scalar, STATE_DIM, INPUT_DIM, 2>;
+  using ZMinAugmentedLagrangian_t =
+      StateInputAugmentedLagrangian<Scalar, STATE_DIM, INPUT_DIM, 1>;
+  using Settings_t = ThrustCommandAccelerationConstraintSettings<Scalar>;
+
+  explicit ThrustCommandAccelerationAugmentedLagrangian(
+      const Settings_t& config)
+      : constraint_(config.constraint),
+        zMinConstraint_(config.zMinConstraint),
+        constraintPenalty_(config.constraintPenalty),
+        zMinPenalty_(config.zMinPenalty),
+        constraintLagrangian_(&constraint_, &constraintPenalty_),
+        zMinLagrangian_(&zMinConstraint_, &zMinPenalty_) {}
+
+  ConstraintAugmentedLagrangian_t* constraintLagrangian() {
+    return &constraintLagrangian_;
+  }
+  const ConstraintAugmentedLagrangian_t* constraintLagrangian() const {
+    return &constraintLagrangian_;
+  }
+
+  ZMinAugmentedLagrangian_t* zMinLagrangian() { return &zMinLagrangian_; }
+  const ZMinAugmentedLagrangian_t* zMinLagrangian() const {
+    return &zMinLagrangian_;
+  }
+
+ private:
+  Constraint_t constraint_;
+  ZMinConstraint_t zMinConstraint_;
+  Penalty_t constraintPenalty_;
+  Penalty_t zMinPenalty_;
+  ConstraintAugmentedLagrangian_t constraintLagrangian_;
+  ZMinAugmentedLagrangian_t zMinLagrangian_;
+};
+
 template <typename Scalar>
 class ThrustVectorReferenceTrajectoryGenerator {
  public:
@@ -838,6 +1128,9 @@ class ThrustVectorReferenceTrajectoryGenerator {
 
 template <typename Scalar>
 struct ThrustVectorOCPSettings {
+  using ConstraintSettings_t =
+      ThrustCommandAccelerationConstraintSettings<Scalar>;
+
   // 权重
   Matrix<Scalar, STATE_DIM, STATE_DIM> Q;
   Matrix<Scalar, INPUT_DIM, INPUT_DIM> R;
@@ -850,6 +1143,9 @@ struct ThrustVectorOCPSettings {
 
   // 速度参考轨迹一阶低通系数
   Vector<Scalar, 3> referenceTrajectoryAlpha{Scalar(1), Scalar(1), Scalar(1)};
+
+  // 推力锥约束、总加速度椭球约束、z-min 约束及其增广惩罚参数。
+  ConstraintSettings_t constraintSettings{};
 };
 
 template <typename Scalar>
@@ -908,17 +1204,27 @@ class ThrustVectorOptimalControlProblem {
       ThrustVectorDiagonalTrackFinalCost<Scalar,
                                          static_cast<int>(PredictLength + 1)>;
   using ThrustVectorDynamicSystem_t = ThrustVectorDynamicSystem<Scalar>;
+  using ConstraintAugmentedLagrangian_t =
+      ThrustCommandAccelerationAugmentedLagrangian<Scalar>;
 
   ThrustVectorOptimalControlProblem(
       const ThrustVectorOCPSettings<Scalar>& settings)
       : trackCost_(settings.Q, settings.R, settings.Ra, 0),
         directionCost_(settings.alpha, settings.weight, 1),
         finalCost_(settings.Qf, 0),
+        constraintAugmentedLagrangian_(settings.constraintSettings),
         dynamics_(settings.alpha) {
     problem_.dynamicsPtr = &dynamics_;
     problem_.cost.add(trackCost_);
     problem_.cost.add(directionCost_);
     problem_.finalCost.add(finalCost_);
+    // 注册 state-input 不等式增广拉格朗日项：
+    // term 0: 推力锥约束 + 总加速度椭球约束（2 维）
+    // term 1: z 轴最小值约束（1 维）
+    problem_.inequalityLagrangian.template set<0>(
+        constraintAugmentedLagrangian_.constraintLagrangian());
+    problem_.inequalityLagrangian.template set<1>(
+        constraintAugmentedLagrangian_.zMinLagrangian());
   }
   ~ThrustVectorOptimalControlProblem() = default;
 
@@ -929,6 +1235,7 @@ class ThrustVectorOptimalControlProblem {
   TrackCost_t trackCost_;
   DirectionCost_t directionCost_;
   FinalCost_t finalCost_;
+  ConstraintAugmentedLagrangian_t constraintAugmentedLagrangian_;
   ThrustVectorDynamicSystem_t dynamics_;
   Problem_t problem_;
 };
@@ -938,8 +1245,10 @@ class ThrustVectorILQR
     : public ThrustVectorOptimalControlProblem<Scalar, PredictLength> {
  public:
   using Descriptor_t = iLQRDescriptor<
-      Scalar, TranscriptionConfig<Dimensions<STATE_DIM, INPUT_DIM>,
-                                  Horizon<PredictLength>, DiscreteDynamics>>;
+      Scalar,
+      TranscriptionConfig<Dimensions<STATE_DIM, INPUT_DIM>,
+                          Horizon<PredictLength>, DiscreteDynamics>,
+      ThrustVectorConstraintConfig<Scalar>>;
   using Solver_t = iLQR<Descriptor_t>;
   using HoverInitializer_t = HoverInitializer<Scalar>;
   using StateVector_t = typename Solver_t::StateVector_t;
@@ -1022,4 +1331,4 @@ createThrustVectorFirstOrderLagProblem(
     const ThrustVectorILQRSettings<Scalar>& settings) {
   return ThrustVectorILQR<Scalar, PredictLength>(settings);
 }
-}  // namespace thrust_vector_first_order_lag
+}  // namespace tvfol_constrain

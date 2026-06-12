@@ -53,11 +53,14 @@ using namespace matrix;
 
 namespace {
 
-thrust_vector_first_order_lag::ThrustVectorILQRSettings<float>
+namespace tv = tvfol_constrain;
+using ILQRSettings = tv::ThrustVectorILQRSettings<float>;
+using ILQROcpSettings = tv::ThrustVectorOCPSettings<float>;
+
+ILQRSettings
 makeILQRSettings() {
-  thrust_vector_first_order_lag::ThrustVectorILQRSettings<float> settings{};
-  thrust_vector_first_order_lag::ThrustVectorOCPSettings<float>& ocp_settings =
-      settings.ocpSettings;
+  ILQRSettings settings{};
+  ILQROcpSettings& ocp_settings = settings.ocpSettings;
 
   ocp_settings.Q.setZero();
   ocp_settings.Q.template topLeftCorner<3, 3>().setIdentity();
@@ -68,15 +71,16 @@ makeILQRSettings() {
   ocp_settings.Qf.setZero();
   ocp_settings.Qf.template topLeftCorner<3, 3>() =
       float(10.0) * matrix::Matrix<float, 3, 3>::Identity();
-  ocp_settings.weight = 1;
-  ocp_settings.alpha = 0.3;
-  ocp_settings.referenceTrajectoryAlpha = matrix::Vector3f{0.4f, 0.4f, 0.6f};
+  ocp_settings.weight = 1.5;
+  ocp_settings.alpha = 0.35;
+  ocp_settings.referenceTrajectoryAlpha = matrix::Vector3f{0.3f, 0.3f, 0.55f};
 
   DDPSettings<float>& ddp_settings = settings.ddpSettings;
   ddp_settings.timeStep = PositionControl::kTimeStep;
   ddp_settings.maxNumIterations = 3;
-  ddp_settings.lineSearch.minStepLength = 0.2f;
+  ddp_settings.lineSearch.minStepLength = 0.1f;
 
+  ocp_settings.constraintSettings.constraint.maxTiltAngleRad = 45.f / 180.f * M_PI_F;
   return settings;
 }
 
@@ -240,14 +244,14 @@ void PositionControl::_velocityControl(const float dt) {
 
     accel_bias_estimator_.update(dt, velocity_error, freeze_bias_axis);
 
-    _ilqr->setDesireTrajectory(_time, _vel_sp, _vel,
-                               accel_bias_estimator_.bias());
+    _ilqr.setDesireTrajectory(_time, _vel_sp, _vel,
+                              accel_bias_estimator_.bias());
     _state.template head<3>() = _vel;
     _state.template segment<3>(3) = _acceleration;
     _state.template segment<3>(6) = _input;
-    _ilqr->solver().run(_time, _state);
+    _ilqr.solver().run(_time, _state);
 
-    const auto& primalSolution = _ilqr->solver().primalSolution();
+    const auto& primalSolution = _ilqr.solver().primalSolution();
     const Vector3f delta_input = primalSolution.inputTrajectory_.front();
     _input += delta_input;
 
@@ -261,28 +265,31 @@ void PositionControl::_velocityControl(const float dt) {
     }
 
     _input(2) = math::constrain(_input(2), -_lim_acc_up, _lim_acc_down);
+    // TODO(thrust_vector): 若要恢复上游加速度前馈与iLQR输出叠加，需要先完成约束一致性验证。
+    // NOTE: 参数必须设置为 MPC_POS_MODE = 0 (Direct velocity)；MPC_POS_MODE = 4 会引入额外加速度前馈并绕开此处约束预期。
     ControlMath::addIfNotNanVector3f(_acc_sp, _input);
   }
 
-  //   ControlMath::setZeroIfNanVector3f(_vel_sp);
-  //   ControlMath::setZeroIfNanVector3f(_vel);
-  //   ControlMath::setZeroIfNanVector3f(_acceleration);
+//     ControlMath::setZeroIfNanVector3f(_vel_sp);
+//     ControlMath::setZeroIfNanVector3f(_vel);
+//     ControlMath::setZeroIfNanVector3f(_acceleration);
 
-  //   _vel.setZero();
-  //   _vel_sp.setZero();
-  //   _acceleration.setZero();
-  //   _vel_sp = matrix::Vector<float, 3>{0.0118f, -0.008f, 2.45166f};
-  //   _ilqr.setDesireTrajectory(_time, _vel_sp, _vel,
-  //   accel_bias_estimator_.bias());
+//     _vel.setZero();
+//     _vel_sp.setZero();
+//     _acceleration.setZero();
+//     _vel_sp = matrix::Vector<float, 3>{0.0118f, -0.008f, 2.45166f};
+//     _ilqr.setDesireTrajectory(_time, _vel_sp, _vel,
+//     accel_bias_estimator_.bias());
 
-  //   _state.template head<3>() = _vel;
-  //   _state.template segment<3>(3) = _acceleration;
-  //   _state.template segment<3>(6) = _input;
-  //   _ilqr.solver().run(_time, _state);
+//     _state.template head<3>() = _vel;
+//     _state.template segment<3>(3) = _acceleration;
+//     _state.template segment<3>(6) = _input;
+//     _ilqr.solver().run(_time, _state);
 
-  //   const auto& primalSolution = _ilqr.solver().primalSolution();
-  //   const Vector3f delta_input = primalSolution.inputTrajectory_.front();
-  //   _input += delta_input;
+//     const auto& primalSolution = _ilqr.solver().primalSolution();
+//     const Vector3f delta_input = primalSolution.inputTrajectory_.front();
+//     _input += delta_input;
+
   _accelerationControl();
 }
 
@@ -353,11 +360,6 @@ void PositionControl::getAttitudeSetpoint(
   }
 
   attitude_setpoint.yaw_sp_move_rate = _yawspeed_sp;
-  //       std::cout << "thrust_body: " << attitude_setpoint.thrust_body[0] << "
-  //       "
-  //       << attitude_setpoint.thrust_body[1] << " " <<
-  //       attitude_setpoint.thrust_body[2]
-  //       << " " << std::endl;
 }
 
 int PositionControl::print_status() {

@@ -49,7 +49,7 @@
 #include <matrix/matrix/math.hpp>
 
 #include "AccelerationBiasEstimator.hpp"
-#include "ThrustVectorFirstOrderLag.hpp"
+#include "ThrustVectorFirstOrderLagConstrain.hpp"
 #include "matrix/Vector3.hpp"
 
 struct PositionControlStates {
@@ -84,7 +84,11 @@ struct PositionControlStates {
 class PositionControl {
  public:
   static constexpr size_t kPredictLength = 25;
+  #if defined(__PX4_NUTTX)
   static constexpr float kTimeStep = 1.f / 100.f;
+  #else
+  static constexpr float kTimeStep = 1.f / 125.f;
+  #endif
   PositionControl();
   ~PositionControl();
 
@@ -292,9 +296,9 @@ class PositionControl {
   float _roll_sp{NAN};      /**< desired roll */
   float _pitch_sp{NAN};     /**< desired pitch */
 
-  matrix::Vector<float, thrust_vector_first_order_lag::STATE_DIM> _state;
+  matrix::Vector<float, tvfol_constrain::STATE_DIM> _state;
   matrix::Vector<float, 3> _input;
   AccelerationBiasEstimator<float> accel_bias_estimator_;
-  thrust_vector_first_order_lag::ThrustVectorILQRSettings<float> ilqr_settings;
-  thrust_vector_first_order_lag::ThrustVectorILQR<float, kPredictLength> _ilqr;
+  tvfol_constrain::ThrustVectorILQRSettings<float> ilqr_settings;
+  tvfol_constrain::ThrustVectorILQR<float, kPredictLength> _ilqr;
 };
